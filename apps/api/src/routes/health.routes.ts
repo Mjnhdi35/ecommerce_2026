@@ -1,9 +1,29 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
+import { container } from '../container';
 import { HealthController } from '../controllers/health.controller';
 
-const router = Router();
-const healthController = new HealthController();
+export class HealthRoutes {
+  private router: Router;
 
-router.get('/health', healthController.getHealth);
+  constructor() {
+    this.router = Router();
+    this.initializeRoutes();
+  }
 
-export default router;
+  private initializeRoutes(): void {
+    this.router.get('/health', this.getHealth);
+  }
+
+  private getHealth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const healthController = container.resolve<HealthController>('healthController');
+      await healthController.getHealth(req, res);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getRouter(): Router {
+    return this.router;
+  }
+}

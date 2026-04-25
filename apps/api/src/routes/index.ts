@@ -1,13 +1,29 @@
 import { Router } from 'express';
-import healthRoutes from './health.routes';
-import mongoRoutes from './mongo.routes';
+import { HealthRoutes } from './health.routes';
+import { MongoRoutes } from './mongo.routes';
 
-const router = Router();
+export class ApiRoutes {
+  private router: Router;
+  private healthRoutes: HealthRoutes;
+  private mongoRoutes: MongoRoutes;
 
-// Health check routes
-router.use('/', healthRoutes);
+  constructor() {
+    this.router = Router();
+    this.healthRoutes = new HealthRoutes();
+    this.mongoRoutes = new MongoRoutes();
+    this.initializeRoutes();
+  }
 
-// MongoDB routes
-router.use('/', mongoRoutes);
+  private initializeRoutes(): void {
+    this.router.use('/', this.healthRoutes.getRouter());
 
-export default router;
+    this.router.use('/', this.mongoRoutes.getRouter());
+  }
+
+  public getRouter(): Router {
+    return this.router;
+  }
+}
+
+const apiRoutesInstance = new ApiRoutes();
+export default apiRoutesInstance.getRouter();

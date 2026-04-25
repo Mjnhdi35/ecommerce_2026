@@ -5,8 +5,9 @@
   "type": "commonjs",
   "main": "dist/server.js",
   "scripts": {
+    "tsc": "tsc --noEmit",
     "build": "tsc",
-    "dev": "npm run build && nodemon --watch src --ext ts --exec \"node dist/server.js\"",
+    "dev": "nodemon --watch src --ext ts --exec \"ts-node src/server.ts\"",
     "start": "node dist/server.js",
     "clean": "rimraf dist",
     "lint": "eslint src --ext .ts --fix"
@@ -15,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "awilix": "^13.0.3",
     "express": "^5.2.1",
     "mongodb": "^7.2.0"
   },

@@ -3,7 +3,6 @@ import { connectToDatabase, disconnectFromDatabase } from "./database/connection
 
 const application = new App();
 
-// Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('Received SIGINT. Graceful shutdown...');
   await disconnectFromDatabase();
@@ -16,13 +15,10 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-// Start the server
 (async () => {
   try {
-    // Connect to database first
     await connectToDatabase();
 
-    // Start the server
     application.start();
   } catch (error) {
     console.error('Failed to start server:', error);

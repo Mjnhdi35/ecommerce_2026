@@ -1,16 +1,12 @@
 import { Request, Response } from 'express';
+import { container } from '../container';
 import { MongoService } from '../services/mongo.service';
 
 export class MongoController {
-  private mongoService: MongoService;
-
-  constructor() {
-    this.mongoService = new MongoService();
-  }
-
   public getMongoStatus = async (req: Request, res: Response): Promise<void> => {
     try {
-      const mongoStatus = await this.mongoService.getMongoStatus();
+      const mongoService = container.resolve<MongoService>('mongoService');
+      const mongoStatus = await mongoService.getMongoStatus();
       res.json(mongoStatus);
     } catch (error) {
       res.status(500).json({

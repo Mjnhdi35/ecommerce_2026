@@ -1,16 +1,12 @@
 import { Request, Response } from 'express';
+import { container } from '../container';
 import { HealthService } from '../services/health.service';
 
 export class HealthController {
-  private healthService: HealthService;
-
-  constructor() {
-    this.healthService = new HealthService();
-  }
-
   public getHealth = async (req: Request, res: Response): Promise<void> => {
     try {
-      const healthStatus = await this.healthService.getHealthStatus();
+      const healthService = container.resolve<HealthService>('healthService');
+      const healthStatus = await healthService.getHealthStatus();
       res.json(healthStatus);
     } catch (error) {
       res.status(500).json({

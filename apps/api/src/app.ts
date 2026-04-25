@@ -1,7 +1,8 @@
-/* eslint-disable no-console */
 import express, { Express } from "express";
 import dotenv from "dotenv";
 import apiRoutes from "./routes";
+import { errorHandler } from "./middlewares/error.middleware";
+import { notFound } from "./middlewares/notFound.middleware";
 
 export class App {
   private app: Express;
@@ -40,6 +41,14 @@ export class App {
 
     // API routes
     this.app.use("/", apiRoutes);
+
+    // 404 handler - catch all routes that don't match above
+    this.app.use((req, res, next) => {
+      notFound(req, res, next);
+    });
+
+    // Error handler
+    this.app.use(errorHandler);
   }
 
   public getApp(): Express {
