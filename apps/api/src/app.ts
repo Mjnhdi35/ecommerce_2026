@@ -1,10 +1,7 @@
+/* eslint-disable no-console */
 import express, { Express } from "express";
 import dotenv from "dotenv";
-import {
-  connectToDatabase,
-  getDatabase,
-  isDatabaseConnected,
-} from "./database/connection";
+import apiRoutes from "./routes";
 
 export class App {
   private app: Express;
@@ -28,54 +25,8 @@ export class App {
   }
 
   private setupRoutes(): void {
-    this.app.get("/health", async (req, res) => {
-      try {
-        if (!isDatabaseConnected()) {
-          await connectToDatabase();
-        }
-        const dbConnected = isDatabaseConnected();
-
-        res.json({
-          status: "OK",
-          message: "Express 5 API is running",
-          timestamp: new Date().toISOString(),
-          nodeVersion: process.version,
-          env: process.env.NODE_ENV || "development",
-          databaseConnected: dbConnected,
-        });
-      } catch (error) {
-        res.status(500).json({
-          status: "ERROR",
-          message: "API is running but database connection failed",
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-      }
-    });
-
-    this.app.get("/mongo-status", async (req, res) => {
-      try {
-        if (!isDatabaseConnected()) {
-          await connectToDatabase();
-        }
-        const db = getDatabase();
-        await db.admin().ping();
-
-        res.json({
-          status: "OK",
-          message: "MongoDB connected successfully",
-          database: "ecommerce", // Hardcode database name or get from config
-          env: process.env.NODE_ENV || "development",
-        });
-      } catch (error) {
-        res.status(500).json({
-          status: "ERROR",
-          message: "MongoDB connection failed",
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-      }
-    });
-
-    this.app.get("/", (req, res) => {
+    // Root route
+    this.app.get("/", (_req, res) => {
       res.json({
         message: "Welcome to Express 5 API",
         version: "1.0.0",
@@ -86,6 +37,9 @@ export class App {
         },
       });
     });
+
+    // API routes
+    this.app.use("/", apiRoutes);
   }
 
   public getApp(): Express {
