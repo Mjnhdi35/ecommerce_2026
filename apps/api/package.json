@@ -1,0 +1,30 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "npm run build && nodemon --watch src --ext ts --exec \"node dist/server.js\"",
+    "start": "node dist/server.js",
+    "clean": "rimraf dist",
+    "lint": "eslint src --ext .ts --fix"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.6.0",
+    "dotenv": "^17.4.2",
+    "typescript": "^5.6.3",
+    "nodemon": "^3.1.4",
+    "ts-node": "^10.9.2",
+    "rimraf": "^5.0.5",
+    "eslint": "^8.57.0"
+  }
+}

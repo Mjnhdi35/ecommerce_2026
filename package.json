@@ -1,0 +1,13 @@
+{
+  "name": "ecommerce",
+  "version": "1.0.0",
+  "private": true,
+  "keywords": [],
+  "author": "",
+  "workspaces": [
+    "apps/*"
+  ],
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
