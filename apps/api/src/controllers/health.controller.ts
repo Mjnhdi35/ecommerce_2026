@@ -11,7 +11,7 @@ export class HealthController {
     } catch (error) {
       res.status(500).json({
         status: "ERROR",
-        message: "API is running but database connection failed",
+        message: "API is running but health check failed",
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }

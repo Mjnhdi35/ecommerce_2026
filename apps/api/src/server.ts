@@ -4,8 +4,7 @@ import { Logger } from "./services/logger.service";
 
 const logger = new Logger('Server');
 const application = new App();
-
-// Graceful shutdown
+ 
 process.on('SIGINT', async () => {
   logger.info('Received SIGINT. Graceful shutdown...');
   await disconnectFromDatabase();
@@ -18,13 +17,20 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-// Start the server
+ 
 (async () => {
   try {
-    // Connect to database first
-    await connectToDatabase();
-
-    // Start the server
+    
+    try {
+      await connectToDatabase();
+      logger.info("Database connected successfully");
+    } catch (dbError) {
+      logger.warn(
+        "Database connection failed, starting without database",
+        dbError,
+      );
+    }
+ 
     application.start();
   } catch (error) {
     logger.error('Failed to start server', error);
