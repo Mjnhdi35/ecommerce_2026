@@ -15,6 +15,6 @@ container.register({
   healthService: asClass(HealthService).singleton(),
   mongoService: asClass(MongoService).singleton(),
 
-  dbName: asValue('ecommerce'),
+  dbName: asValue(process.env.DB_NAME || 'ecommerce'),
 });
 

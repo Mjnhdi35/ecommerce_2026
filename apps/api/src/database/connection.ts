@@ -3,6 +3,10 @@ import { MongoClient } from "mongodb";
 let client: MongoClient | null = null;
 let isConnected = false;
 
+import { Logger } from '../services/logger.service';
+
+const logger = new Logger('Database');
+
 export const connectToDatabase = async (): Promise<MongoClient> => {
   if (isConnected && client) {
     return client;
@@ -14,15 +18,15 @@ export const connectToDatabase = async (): Promise<MongoClient> => {
       throw new Error("MONGO_URL is not defined in environment variables");
     }
 
-    console.log("Connecting to MongoDB...");
+    logger.info("Connecting to MongoDB...");
     client = new MongoClient(mongoUrl);
     await client.connect();
     isConnected = true;
-    console.log("✅ Successfully connected to MongoDB");
+    logger.info("Successfully connected to MongoDB");
 
     return client;
   } catch (error) {
-    console.error("❌ Error connecting to MongoDB:", error);
+    logger.error("Error connecting to MongoDB", error);
     throw error;
   }
 };
@@ -32,7 +36,7 @@ export const disconnectFromDatabase = async (): Promise<void> => {
     await client.close();
     client = null;
     isConnected = false;
-    console.log("Disconnected from MongoDB");
+    logger.info("Disconnected from MongoDB");
   }
 };
 

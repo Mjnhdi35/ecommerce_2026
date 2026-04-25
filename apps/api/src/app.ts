@@ -3,6 +3,9 @@ import dotenv from "dotenv";
 import apiRoutes from "./routes";
 import { errorHandler } from "./middlewares/error.middleware";
 import { notFound } from "./middlewares/notFound.middleware";
+import { Logger } from "./services/logger.service";
+
+const logger = new Logger("App");
 
 export class App {
   private app: Express;
@@ -26,28 +29,24 @@ export class App {
   }
 
   private setupRoutes(): void {
-    // Root route
+   
     this.app.get("/", (_req, res) => {
       res.json({
         message: "Welcome to Express 5 API",
         version: "1.0.0",
         endpoints: {
           health: "/health",
-          mongo: "/mongo-status",
-          root: "/",
         },
       });
     });
 
-    // API routes
     this.app.use("/", apiRoutes);
 
-    // 404 handler - catch all routes that don't match above
     this.app.use((req, res, next) => {
       notFound(req, res, next);
     });
 
-    // Error handler
+    
     this.app.use(errorHandler);
   }
 
@@ -57,12 +56,10 @@ export class App {
 
   public start(): void {
     this.app.listen(this.port, () => {
-      console.log(`🚀 Express 5 API server running on port ${this.port}`);
-      console.log(`📊 Health check: http://localhost:${this.port}/health`);
-      console.log(`🌐 API: http://localhost:${this.port}/`);
-      console.log(
-        `🔧 Environment: ${process.env.NODE_ENV || "No Environment"}`,
-      );
+      logger.info(`Express 5 API server running on port ${this.port}`);
+      logger.info(`Health check: http://localhost:${this.port}/health`);
+      logger.info(`API: http://localhost:${this.port}/`);
+      logger.info(`Environment: ${process.env.NODE_ENV || "No Environment"}`);
     });
   }
 }
