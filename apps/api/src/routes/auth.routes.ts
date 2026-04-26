@@ -1,92 +1,45 @@
-import { NextFunction, Request, Response, Router } from "express";
-import { container } from "../container";
 import { AuthController } from "../controllers/auth.controller";
-import { authenticate } from "../middlewares/auth.middleware";
+import { AuthMiddleware } from "../middlewares/auth.middleware";
+import { BaseRoutes } from "./base.routes";
 
-export class AuthRoutes {
-  private router: Router;
+export class AuthRoutes extends BaseRoutes {
+  private authController: AuthController;
+  private authMiddleware: AuthMiddleware;
 
-  constructor() {
-    this.router = Router();
+  constructor({
+    authController,
+    authMiddleware,
+  }: {
+    authController: AuthController;
+    authMiddleware: AuthMiddleware;
+  }) {
+    super();
+    this.authController = authController;
+    this.authMiddleware = authMiddleware;
     this.initializeRoutes();
   }
 
   private initializeRoutes(): void {
-    this.router.post("/auth/register", this.register);
-    this.router.post("/auth/login", this.login);
-    this.router.post("/auth/refresh", this.refresh);
-    this.router.post("/auth/logout", this.logout);
-    this.router.get("/auth/me", authenticate, this.me);
-  }
-
-  private register = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    await this.handle(req, res, next, (controller) =>
-      controller.register(req, res),
+    this.router.post(
+      "/auth/register",
+      this.handle(this.authController, this.authController.register),
     );
-  };
-
-  private login = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    await this.handle(req, res, next, (controller) =>
-      controller.login(req, res),
+    this.router.post(
+      "/auth/login",
+      this.handle(this.authController, this.authController.login),
     );
-  };
-
-  private refresh = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    await this.handle(req, res, next, (controller) =>
-      controller.refresh(req, res),
+    this.router.post(
+      "/auth/refresh",
+      this.handle(this.authController, this.authController.refresh),
     );
-  };
-
-  private logout = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    await this.handle(req, res, next, (controller) =>
-      controller.logout(req, res),
+    this.router.post(
+      "/auth/logout",
+      this.handle(this.authController, this.authController.logout),
     );
-  };
-
-  private me = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    await this.handle(req, res, next, (controller) => controller.me(req, res));
-  };
-
-  private async handle(
-    _req: Request,
-    res: Response,
-    next: NextFunction,
-    action: (controller: AuthController) => Promise<void>,
-  ): Promise<void> {
-    const authController = container.resolve<AuthController>("authController");
-
-    try {
-      await action(authController);
-    } catch (error) {
-      try {
-        authController.handleError(error, res);
-      } catch (unhandledError) {
-        next(unhandledError);
-      }
-    }
-  }
-
-  public getRouter(): Router {
-    return this.router;
+    this.router.get(
+      "/auth/me",
+      this.authMiddleware.authenticate,
+      this.handle(this.authController, this.authController.me),
+    );
   }
 }

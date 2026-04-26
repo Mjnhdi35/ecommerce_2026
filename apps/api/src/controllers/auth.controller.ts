@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { container } from "../container";
 import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { AuthService } from "../services/auth.service";
 import { HttpError } from "../services/user.service";
@@ -21,10 +20,15 @@ const refreshTokenSchema = z.object({
 });
 
 export class AuthController {
+  private authService: AuthService;
+
+  constructor({ authService }: { authService: AuthService }) {
+    this.authService = authService;
+  }
+
   public register = async (req: Request, res: Response): Promise<void> => {
-    const authService = container.resolve<AuthService>("authService");
     const payload = authUserSchema.parse(req.body);
-    const authResult = await authService.register(payload);
+    const authResult = await this.authService.register(payload);
 
     res.status(201).json({
       status: "OK",
@@ -33,9 +37,8 @@ export class AuthController {
   };
 
   public login = async (req: Request, res: Response): Promise<void> => {
-    const authService = container.resolve<AuthService>("authService");
     const payload = loginSchema.parse(req.body);
-    const authResult = await authService.login(payload.email, payload.password);
+    const authResult = await this.authService.login(payload.email, payload.password);
 
     res.json({
       status: "OK",
@@ -44,9 +47,8 @@ export class AuthController {
   };
 
   public refresh = async (req: Request, res: Response): Promise<void> => {
-    const authService = container.resolve<AuthService>("authService");
     const payload = refreshTokenSchema.parse(req.body);
-    const tokens = await authService.refresh(payload.refreshToken);
+    const tokens = await this.authService.refresh(payload.refreshToken);
 
     res.json({
       status: "OK",
@@ -55,9 +57,8 @@ export class AuthController {
   };
 
   public logout = async (req: Request, res: Response): Promise<void> => {
-    const authService = container.resolve<AuthService>("authService");
     const payload = refreshTokenSchema.parse(req.body);
-    await authService.logout(payload.refreshToken);
+    await this.authService.logout(payload.refreshToken);
 
     res.status(204).send();
   };

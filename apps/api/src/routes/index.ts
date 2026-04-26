@@ -11,12 +11,22 @@ export class ApiRoutes {
   private mongoRoutes: MongoRoutes;
   private userRoutes: UserRoutes;
 
-  constructor() {
+  constructor({
+    authRoutes,
+    healthRoutes,
+    mongoRoutes,
+    userRoutes,
+  }: {
+    authRoutes: AuthRoutes;
+    healthRoutes: HealthRoutes;
+    mongoRoutes: MongoRoutes;
+    userRoutes: UserRoutes;
+  }) {
     this.router = Router();
-    this.authRoutes = new AuthRoutes();
-    this.healthRoutes = new HealthRoutes();
-    this.mongoRoutes = new MongoRoutes();
-    this.userRoutes = new UserRoutes();
+    this.authRoutes = authRoutes;
+    this.healthRoutes = healthRoutes;
+    this.mongoRoutes = mongoRoutes;
+    this.userRoutes = userRoutes;
     this.initializeRoutes();
   }
 
@@ -34,6 +44,3 @@ export class ApiRoutes {
     return this.router;
   }
 }
-
-const apiRoutesInstance = new ApiRoutes();
-export default apiRoutesInstance.getRouter();

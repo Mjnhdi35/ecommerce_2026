@@ -1,9 +1,8 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
-import { Collection, ObjectId, WithId } from "mongodb";
+import { Collection, Db, ObjectId, WithId } from "mongodb";
 import { environment } from "../config/environment";
-import { getDatabase } from "../database/connection";
 import { RefreshToken } from "../models/refreshToken";
 import { User } from "../models/user";
 import {
@@ -39,11 +38,17 @@ export class AuthService {
   private refreshTokens: Collection<RefreshToken>;
   private userService: UserService;
 
-  constructor() {
-    this.refreshTokens = getDatabase().collection<RefreshToken>(
+  constructor({
+    db,
+    userService,
+  }: {
+    db: Db;
+    userService: UserService;
+  }) {
+    this.refreshTokens = db.collection<RefreshToken>(
       REFRESH_TOKEN_COLLECTION,
     );
-    this.userService = new UserService();
+    this.userService = userService;
   }
 
   public async register(input: CreateUserInput): Promise<AuthResult> {

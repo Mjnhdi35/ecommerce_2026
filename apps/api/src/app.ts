@@ -1,5 +1,5 @@
 import express, { Express } from "express";
-import apiRoutes from "./routes";
+import { ApiRoutes } from "./routes";
 import { errorHandler } from "./middlewares/error.middleware";
 import { notFound } from "./middlewares/notFound.middleware";
 import { Logger } from "./services/logger.service";
@@ -9,9 +9,11 @@ const logger = new Logger("App");
 export class App {
   private app: Express;
   private port: number;
+  private apiRoutes: ApiRoutes;
 
-  constructor() {
+  constructor({ apiRoutes }: { apiRoutes: ApiRoutes }) {
     this.app = express();
+    this.apiRoutes = apiRoutes;
     this.port = parseInt(process.env.PORT || "3000", 10);
     this.setupMiddleware();
     this.setupRoutes();
@@ -34,7 +36,7 @@ export class App {
       });
     });
 
-    this.app.use("/", apiRoutes);
+    this.app.use("/", this.apiRoutes.getRouter());
 
     this.app.use((req, res, next) => {
       notFound(req, res, next);

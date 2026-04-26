@@ -1,10 +1,10 @@
 import "./config/loadEnv";
 import { App } from "./app";
+import { container, registerDatabase } from "./container";
 import { connectToDatabase, disconnectFromDatabase } from "./database/connection";
 import { Logger } from "./services/logger.service";
 
 const logger = new Logger('Server');
-const application = new App();
  
 process.on('SIGINT', async () => {
   logger.info('Received SIGINT. Graceful shutdown...');
@@ -23,15 +23,18 @@ process.on('SIGTERM', async () => {
   try {
     
     try {
-      await connectToDatabase();
+      const db = await connectToDatabase();
+      registerDatabase(db);
       logger.info("Database connected successfully");
     } catch (dbError) {
       logger.warn(
-        "Database connection failed, starting without database",
+        "Database connection failed, API startup aborted",
         dbError,
       );
+      throw dbError;
     }
- 
+
+    const application = container.resolve<App>("app");
     application.start();
   } catch (error) {
     logger.error('Failed to start server', error);

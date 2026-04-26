@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { container } from "../container";
 import { HttpError, UserService } from "../services/user.service";
 
 const createUserSchema = z.object({
@@ -15,9 +14,14 @@ const updateUserSchema = createUserSchema.partial().refine(
 );
 
 export class UserController {
+  private userService: UserService;
+
+  constructor({ userService }: { userService: UserService }) {
+    this.userService = userService;
+  }
+
   public getUsers = async (_req: Request, res: Response): Promise<void> => {
-    const userService = container.resolve<UserService>("userService");
-    const users = await userService.findAll();
+    const users = await this.userService.findAll();
 
     res.json({
       status: "OK",
@@ -26,8 +30,7 @@ export class UserController {
   };
 
   public getUserById = async (req: Request, res: Response): Promise<void> => {
-    const userService = container.resolve<UserService>("userService");
-    const user = await userService.findById(this.getIdParam(req));
+    const user = await this.userService.findById(this.getIdParam(req));
 
     res.json({
       status: "OK",
@@ -36,9 +39,8 @@ export class UserController {
   };
 
   public createUser = async (req: Request, res: Response): Promise<void> => {
-    const userService = container.resolve<UserService>("userService");
     const payload = createUserSchema.parse(req.body);
-    const user = await userService.create(payload);
+    const user = await this.userService.create(payload);
 
     res.status(201).json({
       status: "OK",
@@ -47,9 +49,8 @@ export class UserController {
   };
 
   public updateUser = async (req: Request, res: Response): Promise<void> => {
-    const userService = container.resolve<UserService>("userService");
     const payload = updateUserSchema.parse(req.body);
-    const user = await userService.update(this.getIdParam(req), payload);
+    const user = await this.userService.update(this.getIdParam(req), payload);
 
     res.json({
       status: "OK",
@@ -58,8 +59,7 @@ export class UserController {
   };
 
   public deleteUser = async (req: Request, res: Response): Promise<void> => {
-    const userService = container.resolve<UserService>("userService");
-    await userService.delete(this.getIdParam(req));
+    await this.userService.delete(this.getIdParam(req));
 
     res.status(204).send();
   };

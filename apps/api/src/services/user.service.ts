@@ -1,6 +1,12 @@
 import bcrypt from "bcrypt";
-import { MongoServerError, ObjectId, OptionalId, WithId } from "mongodb";
-import { getDatabase } from "../database/connection";
+import {
+  Collection,
+  Db,
+  MongoServerError,
+  ObjectId,
+  OptionalId,
+  WithId,
+} from "mongodb";
 import { User } from "../models/user";
 
 const COLLECTION_NAME = "users";
@@ -20,7 +26,11 @@ export class HttpError extends Error {
 }
 
 export class UserService {
-  private collection = getDatabase().collection<User>(COLLECTION_NAME);
+  private collection: Collection<User>;
+
+  constructor({ db }: { db: Db }) {
+    this.collection = db.collection<User>(COLLECTION_NAME);
+  }
 
   public async findAll(): Promise<PublicUser[]> {
     const users = await this.collection.find().sort({ createdAt: -1 }).toArray();

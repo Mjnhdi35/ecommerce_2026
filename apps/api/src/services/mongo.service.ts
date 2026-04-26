@@ -1,5 +1,5 @@
 import { Db, Collection, InsertOneResult, UpdateResult, DeleteResult, Filter, WithId, Document, OptionalUnlessRequiredId } from 'mongodb';
-import { getDatabase, pingDatabase } from '../database/connection';
+import { pingDatabase } from '../database/connection';
 import { environment } from '../config/environment';
 import { Logger } from './logger.service';
 
@@ -13,8 +13,8 @@ export interface MongoError extends Error {
 export class MongoService {
   private db: Db;
 
-  constructor() {
-    this.db = getDatabase();
+  constructor({ db }: { db: Db }) {
+    this.db = db;
   }
 
   public async getMongoStatus() {

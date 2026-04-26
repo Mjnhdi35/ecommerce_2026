@@ -1,29 +1,19 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { container } from '../container';
 import { MongoController } from '../controllers/mongo.controller';
+import { BaseRoutes } from './base.routes';
 
-export class MongoRoutes {
-  private router: Router;
+export class MongoRoutes extends BaseRoutes {
+  private mongoController: MongoController;
 
-  constructor() {
-    this.router = Router();
+  constructor({ mongoController }: { mongoController: MongoController }) {
+    super();
+    this.mongoController = mongoController;
     this.initializeRoutes();
   }
 
   private initializeRoutes(): void {
-    this.router.get('/mongo-status', this.getMongoStatus);
-  }
-
-  private getMongoStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const mongoController = container.resolve<MongoController>('mongoController');
-      await mongoController.getMongoStatus(req, res);
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  public getRouter(): Router {
-    return this.router;
+    this.router.get(
+      '/mongo-status',
+      this.handle(this.mongoController, this.mongoController.getMongoStatus),
+    );
   }
 }
