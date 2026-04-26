@@ -1,6 +1,6 @@
-import { AuthController } from "../controllers/auth.controller";
-import { AuthMiddleware } from "../middlewares/auth.middleware";
-import { BaseRoutes } from "./base.routes";
+import { BaseRoutes } from "../../shared/routes/base.routes";
+import { AuthController } from "./auth.controller";
+import { AuthMiddleware } from "./auth.middleware";
 
 export class AuthRoutes extends BaseRoutes {
   private authController: AuthController;

@@ -7,7 +7,8 @@ import {
   OptionalId,
   WithId,
 } from "mongodb";
-import { User } from "../models/user";
+import { HttpError } from "../../shared/errors/http-error";
+import { User } from "./user.model";
 
 const COLLECTION_NAME = "users";
 const SALT_ROUNDS = 10;
@@ -15,15 +16,6 @@ const SALT_ROUNDS = 10;
 export type CreateUserInput = Pick<User, "username" | "email" | "password">;
 export type UpdateUserInput = Partial<CreateUserInput>;
 export type PublicUser = Omit<WithId<User>, "password">;
-
-export class HttpError extends Error {
-  constructor(
-    public readonly statusCode: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
 
 export class UserService {
   private collection: Collection<User>;

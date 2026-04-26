@@ -1,7 +1,7 @@
 import { Db, Collection, InsertOneResult, UpdateResult, DeleteResult, Filter, WithId, Document, OptionalUnlessRequiredId } from 'mongodb';
-import { pingDatabase } from '../database/connection';
-import { environment } from '../config/environment';
-import { Logger } from './logger.service';
+import { environment } from '../../config/environment';
+import { pingDatabase } from '../../database/connection';
+import { Logger } from '../../shared/logger/logger.service';
 
 const logger = new Logger('MongoDB');
 

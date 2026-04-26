@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { HttpError, UserService } from "../services/user.service";
+import { HttpError } from "../../shared/errors/http-error";
+import { UserService } from "./user.service";
 
 const createUserSchema = z.object({
   username: z.string().trim().min(1),

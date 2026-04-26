@@ -5,7 +5,7 @@ import {
   MongoServerError,
   ServerApiVersion,
 } from "mongodb";
-import { Logger } from "../services/logger.service";
+import { Logger } from "../shared/logger/logger.service";
 
 const logger = new Logger("Database");
 

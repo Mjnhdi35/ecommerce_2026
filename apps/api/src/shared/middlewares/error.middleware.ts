@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { Logger } from '../services/logger.service';
+import { Logger } from '../logger/logger.service';
 
 const logger = new Logger('ErrorMiddleware');
 

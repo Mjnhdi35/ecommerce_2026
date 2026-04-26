@@ -1,5 +1,5 @@
-import { pingDatabase } from '../database/connection';
-import { Logger } from './logger.service';
+import { pingDatabase } from '../../database/connection';
+import { Logger } from '../../shared/logger/logger.service';
 
 const logger = new Logger('Health');
 

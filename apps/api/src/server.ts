@@ -2,7 +2,7 @@ import "./config/loadEnv";
 import { App } from "./app";
 import { container, registerDatabase } from "./container";
 import { connectToDatabase, disconnectFromDatabase } from "./database/connection";
-import { Logger } from "./services/logger.service";
+import { Logger } from "./shared/logger/logger.service";
 
 const logger = new Logger('Server');
  

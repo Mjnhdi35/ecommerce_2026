@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
-import { AuthService, AuthUser } from "../services/auth.service";
-import { HttpError } from "../services/user.service";
+import { HttpError } from "../../shared/errors/http-error";
+import { AuthService, AuthUser } from "./auth.service";
 
 export interface AuthenticatedRequest extends Request {
   user?: AuthUser;

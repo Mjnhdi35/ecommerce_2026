@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { MongoService } from '../services/mongo.service';
+import { MongoService } from './mongo.service';
 
 export class MongoController {
   private mongoService: MongoService;

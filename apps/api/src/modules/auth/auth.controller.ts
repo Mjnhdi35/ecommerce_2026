@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { AuthenticatedRequest } from "../middlewares/auth.middleware";
-import { AuthService } from "../services/auth.service";
-import { HttpError } from "../services/user.service";
+import { HttpError } from "../../shared/errors/http-error";
+import { AuthenticatedRequest } from "./auth.middleware";
+import { AuthService } from "./auth.service";
 
 const authUserSchema = z.object({
   username: z.string().trim().min(1),

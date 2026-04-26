@@ -1,5 +1,5 @@
-import { HealthController } from '../controllers/health.controller';
-import { BaseRoutes } from './base.routes';
+import { BaseRoutes } from '../../shared/routes/base.routes';
+import { HealthController } from './health.controller';
 
 export class HealthRoutes extends BaseRoutes {
   private healthController: HealthController;

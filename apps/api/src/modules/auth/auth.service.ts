@@ -2,15 +2,15 @@ import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
 import { Collection, Db, ObjectId, WithId } from "mongodb";
-import { environment } from "../config/environment";
-import { RefreshToken } from "../models/refreshToken";
-import { User } from "../models/user";
+import { environment } from "../../config/environment";
+import { RefreshToken } from "./refresh-token.model";
+import { User } from "../users/user.model";
 import {
   CreateUserInput,
-  HttpError,
   PublicUser,
   UserService,
-} from "./user.service";
+} from "../users/user.service";
+import { HttpError } from "../../shared/errors/http-error";
 
 const REFRESH_TOKEN_COLLECTION = "refresh_tokens";
 

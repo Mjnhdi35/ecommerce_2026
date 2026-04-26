@@ -1,20 +1,16 @@
 import { Db } from "mongodb";
 import { createContainer, asClass, asValue, InjectionMode } from 'awilix';
 import { App } from "./app";
-import { HealthController } from './controllers/health.controller';
-import { MongoController } from './controllers/mongo.controller';
-import { AuthController } from "./controllers/auth.controller";
-import { UserController } from "./controllers/user.controller";
-import { AuthMiddleware } from "./middlewares/auth.middleware";
+import {
+  AuthController,
+  AuthMiddleware,
+  AuthRoutes,
+  AuthService,
+} from "./modules/auth";
+import { HealthController, HealthRoutes, HealthService } from './modules/health';
+import { MongoController, MongoRoutes, MongoService } from './modules/mongo';
+import { UserController, UserRoutes, UserService } from "./modules/users";
 import { ApiRoutes } from "./routes";
-import { AuthRoutes } from "./routes/auth.routes";
-import { HealthRoutes } from "./routes/health.routes";
-import { MongoRoutes } from "./routes/mongo.routes";
-import { UserRoutes } from "./routes/user.routes";
-import { AuthService } from "./services/auth.service";
-import { HealthService } from './services/health.service';
-import { MongoService } from './services/mongo.service';
-import { UserService } from "./services/user.service";
 import { environment } from "./config/environment";
 
 export const container = createContainer({

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { HealthService } from '../services/health.service';
+import { HealthService } from './health.service';
 
 export class HealthController {
   private healthService: HealthService;

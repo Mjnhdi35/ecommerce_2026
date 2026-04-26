@@ -1,8 +1,8 @@
 import express, { Express } from "express";
 import { ApiRoutes } from "./routes";
-import { errorHandler } from "./middlewares/error.middleware";
-import { notFound } from "./middlewares/notFound.middleware";
-import { Logger } from "./services/logger.service";
+import { errorHandler } from "./shared/middlewares/error.middleware";
+import { notFound } from "./shared/middlewares/not-found.middleware";
+import { Logger } from "./shared/logger/logger.service";
 
 const logger = new Logger("App");
 

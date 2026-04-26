@@ -1,5 +1,5 @@
-import { MongoController } from '../controllers/mongo.controller';
-import { BaseRoutes } from './base.routes';
+import { BaseRoutes } from '../../shared/routes/base.routes';
+import { MongoController } from './mongo.controller';
 
 export class MongoRoutes extends BaseRoutes {
   private mongoController: MongoController;

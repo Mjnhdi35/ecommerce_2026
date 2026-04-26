@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { AuthRoutes } from "./auth.routes";
-import { HealthRoutes } from './health.routes';
-import { MongoRoutes } from './mongo.routes';
-import { UserRoutes } from "./user.routes";
+import { AuthRoutes } from "../modules/auth";
+import { HealthRoutes } from '../modules/health';
+import { MongoRoutes } from '../modules/mongo';
+import { UserRoutes } from "../modules/users";
 
 export class ApiRoutes {
   private router: Router;
