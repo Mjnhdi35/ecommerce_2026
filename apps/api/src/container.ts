@@ -1,7 +1,9 @@
 import { createContainer, asClass, asValue, InjectionMode } from 'awilix';
 import { HealthController } from './controllers/health.controller';
 import { MongoController } from './controllers/mongo.controller';
+import { AuthController } from "./controllers/auth.controller";
 import { UserController } from "./controllers/user.controller";
+import { AuthService } from "./services/auth.service";
 import { HealthService } from './services/health.service';
 import { MongoService } from './services/mongo.service';
 import { UserService } from "./services/user.service";
@@ -12,10 +14,12 @@ export const container = createContainer({
 });
 
 container.register({
+  authController: asClass(AuthController).singleton(),
   healthController: asClass(HealthController).singleton(),
   mongoController: asClass(MongoController).singleton(),
   userController: asClass(UserController).singleton(),
 
+  authService: asClass(AuthService).singleton(),
   healthService: asClass(HealthService).singleton(),
   mongoService: asClass(MongoService).singleton(),
   userService: asClass(UserService).singleton(),

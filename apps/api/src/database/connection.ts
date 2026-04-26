@@ -1,4 +1,10 @@
-import { MongoClient, Db, MongoClientOptions, ServerApiVersion } from "mongodb";
+import {
+  Db,
+  MongoClient,
+  MongoClientOptions,
+  MongoServerError,
+  ServerApiVersion,
+} from "mongodb";
 import { Logger } from "../services/logger.service";
 
 const logger = new Logger("Database");
@@ -82,12 +88,37 @@ class MongoConnection {
   }
 
   private async ensureInitialCollections(db: Db): Promise<void> {
-    const collections = await db.listCollections({ name: "users" }).toArray();
+    const collections = await db.listCollections().toArray();
+    const collectionNames = new Set(collections.map((collection) => collection.name));
 
-    if (collections.length === 0) {
+    if (!collectionNames.has("users")) {
       await db.createCollection("users");
       logger.info('Created initial "users" collection');
     }
+
+    if (!collectionNames.has("refresh_tokens")) {
+      await db.createCollection("refresh_tokens");
+      logger.info('Created initial "refresh_tokens" collection');
+    }
+
+    try {
+      await db.collection("users").createIndex({ email: 1 }, { unique: true });
+    } catch (error) {
+      if (error instanceof MongoServerError && error.code === 11000) {
+        logger.warn(
+          'Skipped unique "users.email" index because duplicate emails already exist',
+        );
+      } else {
+        throw error;
+      }
+    }
+    await db
+      .collection("refresh_tokens")
+      .createIndex({ tokenHash: 1 }, { unique: true });
+    await db.collection("refresh_tokens").createIndex({ userId: 1 });
+    await db
+      .collection("refresh_tokens")
+      .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   }
 
   private async connectWithRetry(

@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { ObjectId, OptionalId, WithId } from "mongodb";
+import { MongoServerError, ObjectId, OptionalId, WithId } from "mongodb";
 import { getDatabase } from "../database/connection";
 import { User } from "../models/user";
 
@@ -37,6 +37,10 @@ export class UserService {
     return this.toPublicUser(user);
   }
 
+  public async findByEmailWithPassword(email: string): Promise<WithId<User> | null> {
+    return this.collection.findOne({ email });
+  }
+
   public async create(input: CreateUserInput): Promise<PublicUser> {
     const now = new Date();
     const document: OptionalId<User> = {
@@ -46,8 +50,12 @@ export class UserService {
       updatedAt: now,
     };
 
-    const result = await this.collection.insertOne(document);
-    return this.findById(result.insertedId.toHexString());
+    try {
+      const result = await this.collection.insertOne(document);
+      return this.findById(result.insertedId.toHexString());
+    } catch (error) {
+      this.handleWriteError(error);
+    }
   }
 
   public async update(id: string, input: UpdateUserInput): Promise<PublicUser> {
@@ -60,10 +68,16 @@ export class UserService {
       update.password = await bcrypt.hash(input.password, SALT_ROUNDS);
     }
 
-    const result = await this.collection.updateOne(
-      { _id: this.toObjectId(id) },
-      { $set: update },
-    );
+    let result;
+
+    try {
+      result = await this.collection.updateOne(
+        { _id: this.toObjectId(id) },
+        { $set: update },
+      );
+    } catch (error) {
+      this.handleWriteError(error);
+    }
 
     if (result.matchedCount === 0) {
       throw new HttpError(404, "User not found");
@@ -91,5 +105,13 @@ export class UserService {
   private toPublicUser(user: WithId<User>): PublicUser {
     const { password, ...publicUser } = user;
     return publicUser;
+  }
+
+  private handleWriteError(error: unknown): never {
+    if (error instanceof MongoServerError && error.code === 11000) {
+      throw new HttpError(409, "Email already exists");
+    }
+
+    throw error;
   }
 }

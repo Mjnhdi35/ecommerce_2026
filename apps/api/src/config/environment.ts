@@ -15,6 +15,14 @@ const environmentSchema = z.object({
     .optional(),
 
   DB_NAME: z.string().min(1, "DB_NAME is required").default("ecommerce"),
+
+  JWT_ACCESS_SECRET: z.string().min(32, "JWT_ACCESS_SECRET must be at least 32 characters"),
+
+  JWT_REFRESH_SECRET: z.string().min(32, "JWT_REFRESH_SECRET must be at least 32 characters"),
+
+  JWT_ACCESS_EXPIRES_IN: z.string().min(1).default("15m"),
+
+  JWT_REFRESH_EXPIRES_IN: z.string().min(1).default("7d"),
 });
 
 const env = process.env;
@@ -23,6 +31,10 @@ const parsedEnvironment = environmentSchema.parse({
   PORT: env.PORT,
   MONGO_URL: env.MONGO_URL,
   DB_NAME: env.DB_NAME,
+  JWT_ACCESS_SECRET: env.JWT_ACCESS_SECRET,
+  JWT_REFRESH_SECRET: env.JWT_REFRESH_SECRET,
+  JWT_ACCESS_EXPIRES_IN: env.JWT_ACCESS_EXPIRES_IN,
+  JWT_REFRESH_EXPIRES_IN: env.JWT_REFRESH_EXPIRES_IN,
 });
 
 const environment = environmentSchema.parse(process.env);
@@ -30,4 +42,13 @@ const environment = environmentSchema.parse(process.env);
 export type Environment = z.infer<typeof environmentSchema>;
 export { parsedEnvironment as environment };
 
-export const { NODE_ENV, PORT, MONGO_URL, DB_NAME } = parsedEnvironment;
+export const {
+  NODE_ENV,
+  PORT,
+  MONGO_URL,
+  DB_NAME,
+  JWT_ACCESS_SECRET,
+  JWT_REFRESH_SECRET,
+  JWT_ACCESS_EXPIRES_IN,
+  JWT_REFRESH_EXPIRES_IN,
+} = parsedEnvironment;
