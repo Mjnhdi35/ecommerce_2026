@@ -17,11 +17,13 @@
   "license": "ISC",
   "dependencies": {
     "awilix": "^13.0.3",
+    "bcrypt": "^6.0.0",
     "express": "^5.2.1",
     "mongodb": "^7.2.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
     "@typescript-eslint/eslint-plugin": "^8.15.0",

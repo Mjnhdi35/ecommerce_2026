@@ -1,8 +1,10 @@
+import bcrypt from "bcrypt";
 import { ObjectId, OptionalId, WithId } from "mongodb";
 import { getDatabase } from "../database/connection";
 import { User } from "../models/user";
 
 const COLLECTION_NAME = "users";
+const SALT_ROUNDS = 10;
 
 export type CreateUserInput = Pick<User, "username" | "email" | "password">;
 export type UpdateUserInput = Partial<CreateUserInput>;
@@ -39,6 +41,7 @@ export class UserService {
     const now = new Date();
     const document: OptionalId<User> = {
       ...input,
+      password: await bcrypt.hash(input.password, SALT_ROUNDS),
       createdAt: now,
       updatedAt: now,
     };
@@ -52,6 +55,10 @@ export class UserService {
       ...input,
       updatedAt: new Date(),
     };
+
+    if (input.password) {
+      update.password = await bcrypt.hash(input.password, SALT_ROUNDS);
+    }
 
     const result = await this.collection.updateOne(
       { _id: this.toObjectId(id) },
