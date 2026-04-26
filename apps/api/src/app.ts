@@ -1,5 +1,6 @@
 import express, { Express } from "express";
 import { ApiRoutes } from "./routes";
+import { ApiResponse } from "./shared/http/response";
 import { errorHandler } from "./shared/middlewares/error.middleware";
 import { notFound } from "./shared/middlewares/not-found.middleware";
 import { Logger } from "./shared/logger/logger.service";
@@ -25,9 +26,8 @@ export class App {
   }
 
   private setupRoutes(): void {
-   
     this.app.get("/", (_req, res) => {
-      res.json({
+      ApiResponse.success(res, {
         message: "Welcome to Express 5 API",
         version: "1.0.0",
         endpoints: {
@@ -42,7 +42,6 @@ export class App {
       notFound(req, res, next);
     });
 
-    
     this.app.use(errorHandler);
   }
 
@@ -52,10 +51,9 @@ export class App {
 
   public start(): void {
     this.app.listen(this.port, () => {
-      logger.info(`Express 5 API server running on port ${this.port}`);
-      logger.info(`Health check: http://localhost:${this.port}/health`);
-      logger.info(`API: http://localhost:${this.port}/`);
-      logger.info(`Environment: ${process.env.NODE_ENV || "No Environment"}`);
+      logger.info(
+        `Express API server started on http://localhost:${this.port} (${process.env.NODE_ENV || "development"})`,
+      );
     });
   }
 }

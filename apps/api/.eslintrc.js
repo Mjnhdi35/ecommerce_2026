@@ -25,13 +25,5 @@ module.exports = {
     ],
     'no-console': 'warn',
   },
-  overrides: [
-    {
-      files: ['src/shared/logger/logger.service.ts'],
-      rules: {
-        'no-console': 'off',
-      },
-    },
-  ],
   ignorePatterns: ['.eslintrc.js', 'dist/', 'node_modules/'],
 };

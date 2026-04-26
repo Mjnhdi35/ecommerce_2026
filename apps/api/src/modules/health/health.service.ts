@@ -11,8 +11,6 @@ export class HealthService {
       logger.info('Health check performed', { databaseConnected: dbConnected });
 
       return {
-        status: "OK",
-        message: "Express 5 API is running",
         timestamp: new Date().toISOString(),
         nodeVersion: process.version,
         env: process.env.NODE_ENV || "No Environment",
@@ -24,8 +22,6 @@ export class HealthService {
       logger.error('Health check failed', error);
 
       return {
-        status: "WARNING",
-        message: "Express 5 API is running but database connection failed",
         timestamp: new Date().toISOString(),
         nodeVersion: process.version,
         env: process.env.NODE_ENV || "No Environment",

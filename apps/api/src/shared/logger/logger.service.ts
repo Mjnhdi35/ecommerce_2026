@@ -1,31 +1,59 @@
+import pino, { Logger as PinoLogger } from "pino";
+
+const rootLogger = pino({
+  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === "production" ? "info" : "debug"),
+  transport:
+    process.env.NODE_ENV === "production"
+      ? undefined
+      : {
+          target: "pino-pretty",
+          options: {
+            colorize: true,
+            messageFormat: "[{context}] {msg}",
+            translateTime: "SYS:standard",
+            ignore: "context,pid,hostname",
+          },
+        },
+});
+
 export class Logger {
-  private context: string;
+  private logger: PinoLogger;
 
   constructor(context: string = "API") {
-    this.context = context;
+    this.logger = rootLogger.child({ context });
   }
 
-  private formatMessage(level: string, message: string, data?: any): string {
-    const timestamp = new Date().toISOString();
-    const dataStr = data ? ` | ${JSON.stringify(data)}` : "";
-    return `[${timestamp}] ${this.context} ${level}: ${message}${dataStr}`;
+  public info(message: string, data?: unknown): void {
+    this.log("info", message, data);
   }
 
-  info(message: string, data?: any): void {
-    console.log(this.formatMessage("INFO", message, data));
+  public error(message: string, error?: unknown): void {
+    this.log("error", message, error);
   }
 
-  error(message: string, error?: any): void {
-    console.error(this.formatMessage("ERROR", message, error));
+  public warn(message: string, data?: unknown): void {
+    this.log("warn", message, data);
   }
 
-  warn(message: string, data?: any): void {
-    console.warn(this.formatMessage("WARN", message, data));
+  public debug(message: string, data?: unknown): void {
+    this.log("debug", message, data);
   }
 
-  debug(message: string, data?: any): void {
-    if (process.env.NODE_ENV === "development") {
-      console.debug(this.formatMessage("DEBUG", message, data));
+  private log(
+    level: "debug" | "error" | "info" | "warn",
+    message: string,
+    data?: unknown,
+  ): void {
+    if (data === undefined) {
+      this.logger[level](message);
+      return;
     }
+
+    if (data instanceof Error) {
+      this.logger[level]({ err: data }, message);
+      return;
+    }
+
+    this.logger[level]({ data }, message);
   }
-} 
+}

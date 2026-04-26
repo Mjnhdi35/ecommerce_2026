@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { HttpError } from "../../shared/errors/http-error";
+import { ApiResponse } from "../../shared/http/response";
 import { UserService } from "./user.service";
 
 const createUserSchema = z.object({
@@ -24,62 +25,43 @@ export class UserController {
   public getUsers = async (_req: Request, res: Response): Promise<void> => {
     const users = await this.userService.findAll();
 
-    res.json({
-      status: "OK",
-      data: users,
-    });
+    ApiResponse.success(res, users);
   };
 
   public getUserById = async (req: Request, res: Response): Promise<void> => {
     const user = await this.userService.findById(this.getIdParam(req));
 
-    res.json({
-      status: "OK",
-      data: user,
-    });
+    ApiResponse.success(res, user);
   };
 
   public createUser = async (req: Request, res: Response): Promise<void> => {
     const payload = createUserSchema.parse(req.body);
     const user = await this.userService.create(payload);
 
-    res.status(201).json({
-      status: "OK",
-      data: user,
-    });
+    ApiResponse.success(res, user, 201);
   };
 
   public updateUser = async (req: Request, res: Response): Promise<void> => {
     const payload = updateUserSchema.parse(req.body);
     const user = await this.userService.update(this.getIdParam(req), payload);
 
-    res.json({
-      status: "OK",
-      data: user,
-    });
+    ApiResponse.success(res, user);
   };
 
   public deleteUser = async (req: Request, res: Response): Promise<void> => {
     await this.userService.delete(this.getIdParam(req));
 
-    res.status(204).send();
+    ApiResponse.noContent(res);
   };
 
   public handleError = (error: unknown, res: Response): void => {
     if (error instanceof z.ZodError) {
-      res.status(400).json({
-        status: "ERROR",
-        message: "Invalid request body",
-        errors: error.issues,
-      });
+      ApiResponse.error(res, "Invalid request body", 400, error.issues);
       return;
     }
 
     if (error instanceof HttpError) {
-      res.status(error.statusCode).json({
-        status: "ERROR",
-        message: error.message,
-      });
+      ApiResponse.error(res, error.message, error.statusCode);
       return;
     }
 

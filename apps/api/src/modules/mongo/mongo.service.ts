@@ -31,8 +31,6 @@ export class MongoService {
       logger.info(`Connected to database: ${environment.DB_NAME}`);
 
       return {
-        status: "OK",
-        message: "MongoDB connected successfully",
         database: environment.DB_NAME,
         env: environment.NODE_ENV,
         stats: {
@@ -45,12 +43,7 @@ export class MongoService {
       };
     } catch (error) {
       logger.error("MongoDB connection failed", error);
-      throw {
-        status: "ERROR",
-        message: "MongoDB connection failed",
-        error: error instanceof Error ? error.message : "Unknown error",
-        code: (error as MongoError).code || 500,
-      };
+      throw error;
     }
   }
 

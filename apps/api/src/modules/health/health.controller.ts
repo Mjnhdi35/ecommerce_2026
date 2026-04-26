@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { ApiResponse } from '../../shared/http/response';
 import { HealthService } from './health.service';
 
 export class HealthController {
@@ -11,13 +12,14 @@ export class HealthController {
   public getHealth = async (_req: Request, res: Response): Promise<void> => {
     try {
       const healthStatus = await this.healthService.getHealthStatus();
-      res.json(healthStatus);
+      ApiResponse.success(res, healthStatus);
     } catch (error) {
-      res.status(500).json({
-        status: "ERROR",
-        message: "API is running but health check failed",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
+      ApiResponse.error(
+        res,
+        "API is running but health check failed",
+        500,
+        error instanceof Error ? error.message : "Unknown error",
+      );
     }
   };
 }

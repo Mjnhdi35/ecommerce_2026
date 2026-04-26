@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { HttpError } from "../../shared/errors/http-error";
+import { ApiResponse } from "../../shared/http/response";
 import { AuthService, AuthUser } from "./auth.service";
 
 export interface AuthenticatedRequest extends Request {
@@ -30,17 +31,11 @@ export class AuthMiddleware {
       next();
     } catch (error) {
       if (error instanceof HttpError) {
-        res.status(error.statusCode).json({
-          status: "ERROR",
-          message: error.message,
-        });
+        ApiResponse.error(res, error.message, error.statusCode);
         return;
       }
 
-      res.status(401).json({
-        status: "ERROR",
-        message: "Invalid access token",
-      });
+      ApiResponse.error(res, "Invalid access token", 401);
     }
   };
 }

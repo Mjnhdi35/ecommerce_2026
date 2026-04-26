@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { ApiResponse } from '../http/response';
 import { Logger } from '../logger/logger.service';
 
 const logger = new Logger('ErrorMiddleware');
@@ -9,11 +10,12 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction,
 ) => {
-  logger.error(error.message, error.stack);
+  logger.error(error.message, error);
 
-  res.status(500).json({
-    status: "ERROR",
-    message: "Internal server error",
-    error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong',
-  });
+  ApiResponse.error(
+    res,
+    "Internal server error",
+    500,
+    process.env.NODE_ENV === 'development' ? error.message : undefined,
+  );
 };

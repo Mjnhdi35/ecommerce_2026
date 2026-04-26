@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { ApiResponse } from '../../shared/http/response';
 import { MongoService } from './mongo.service';
 
 export class MongoController {
@@ -11,13 +12,14 @@ export class MongoController {
   public getMongoStatus = async (_req: Request, res: Response): Promise<void> => {
     try {
       const mongoStatus = await this.mongoService.getMongoStatus();
-      res.json(mongoStatus);
+      ApiResponse.success(res, mongoStatus);
     } catch (error) {
-      res.status(500).json({
-        status: "ERROR",
-        message: "MongoDB connection failed",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
+      ApiResponse.error(
+        res,
+        "MongoDB connection failed",
+        500,
+        error instanceof Error ? error.message : "Unknown error",
+      );
     }
   };
 }

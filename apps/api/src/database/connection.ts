@@ -62,9 +62,6 @@ class MongoConnection {
     }
 
     try {
-      logger.info(
-        `Connecting to MongoDB${this.config.dbName ? `: ${this.config.dbName}` : ""}`,
-      );
       this.client = new MongoClient(this.config.url, this.config.options);
 
       await this.connectWithRetry();

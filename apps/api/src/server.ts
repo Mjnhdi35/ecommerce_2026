@@ -25,7 +25,6 @@ process.on('SIGTERM', async () => {
     try {
       const db = await connectToDatabase();
       registerDatabase(db);
-      logger.info("Database connected successfully");
     } catch (dbError) {
       logger.warn(
         "Database connection failed, API startup aborted",
