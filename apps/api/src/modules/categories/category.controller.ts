@@ -1,44 +1,42 @@
 import { Request, Response } from "express";
-import { HttpError } from "../../shared/errors/http-error";
-import { ApiResponse } from "../../shared/http/response";
+import { Controller } from "../../shared/http/controller";
 import { createCategoryDto, updateCategoryDto } from "./category.dto";
 import { CategoryService } from "./category.service";
 
-export class CategoryController {
+export class CategoryController extends Controller {
   private categoryService: CategoryService;
 
   constructor({ categoryService }: { categoryService: CategoryService }) {
+    super();
     this.categoryService = categoryService;
   }
 
   public getCategories = async (_req: Request, res: Response): Promise<void> => {
     const categories = await this.categoryService.findAll();
 
-    ApiResponse.success(res, categories);
+    this.ok(res, categories);
   };
 
   public getCategoryById = async (
     req: Request,
     res: Response,
   ): Promise<void> => {
-    const category = await this.categoryService.findById(this.getIdParam(req));
+    const category = await this.categoryService.findById(
+      this.requiredParam(req, "id", "Invalid category id"),
+    );
 
-    ApiResponse.success(res, category);
+    this.ok(res, category);
   };
 
   public getCategoryBySlug = async (
     req: Request,
     res: Response,
   ): Promise<void> => {
-    const { slug } = req.params;
+    const category = await this.categoryService.findBySlug(
+      this.requiredParam(req, "slug", "Invalid category slug"),
+    );
 
-    if (typeof slug !== "string") {
-      throw new HttpError(400, "Invalid category slug");
-    }
-
-    const category = await this.categoryService.findBySlug(slug);
-
-    ApiResponse.success(res, category);
+    this.ok(res, category);
   };
 
   public createCategory = async (
@@ -48,7 +46,7 @@ export class CategoryController {
     const payload = createCategoryDto.parse(req.body);
     const category = await this.categoryService.create(payload);
 
-    ApiResponse.success(res, category, 201);
+    this.created(res, category);
   };
 
   public updateCategory = async (
@@ -57,29 +55,21 @@ export class CategoryController {
   ): Promise<void> => {
     const payload = updateCategoryDto.parse(req.body);
     const category = await this.categoryService.update(
-      this.getIdParam(req),
+      this.requiredParam(req, "id", "Invalid category id"),
       payload,
     );
 
-    ApiResponse.success(res, category);
+    this.ok(res, category);
   };
 
   public archiveCategory = async (
     req: Request,
     res: Response,
   ): Promise<void> => {
-    await this.categoryService.archive(this.getIdParam(req));
+    await this.categoryService.archive(
+      this.requiredParam(req, "id", "Invalid category id"),
+    );
 
-    ApiResponse.noContent(res);
+    this.noContent(res);
   };
-
-  private getIdParam(req: Request): string {
-    const { id } = req.params;
-
-    if (typeof id !== "string") {
-      throw new HttpError(400, "Invalid category id");
-    }
-
-    return id;
-  }
 }

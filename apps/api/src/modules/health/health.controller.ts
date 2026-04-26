@@ -1,26 +1,17 @@
 import { Request, Response } from 'express';
-import { ApiResponse } from '../../shared/http/response';
+import { Controller } from '../../shared/http/controller';
 import { HealthService } from './health.service';
 
-export class HealthController {
+export class HealthController extends Controller {
   private healthService: HealthService;
 
   constructor({ healthService }: { healthService: HealthService }) {
+    super();
     this.healthService = healthService;
   }
 
   public getHealth = async (_req: Request, res: Response): Promise<void> => {
-    try {
-      const healthStatus = await this.healthService.getHealthStatus();
-      ApiResponse.success(res, healthStatus);
-    } catch (error) {
-      ApiResponse.error(
-        res,
-        "API is running but health check failed",
-        500,
-        error instanceof Error ? error.message : "Unknown error",
-        "HEALTH_CHECK_FAILED",
-      );
-    }
+    const healthStatus = await this.healthService.getHealthStatus();
+    this.ok(res, healthStatus);
   };
 }

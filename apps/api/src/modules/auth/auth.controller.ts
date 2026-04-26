@@ -1,7 +1,7 @@
 import { CookieOptions, Request, Response } from "express";
 import { environment } from "../../config/environment";
 import { HttpError } from "../../shared/errors/http-error";
-import { ApiResponse } from "../../shared/http/response";
+import { Controller } from "../../shared/http/controller";
 import {
   changePasswordDto,
   loginDto,
@@ -17,10 +17,11 @@ const REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
 const ACCESS_TOKEN_MAX_AGE_MS = 15 * 60 * 1000;
 const REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-export class AuthController {
+export class AuthController extends Controller {
   private authService: AuthService;
 
   constructor({ authService }: { authService: AuthService }) {
+    super();
     this.authService = authService;
   }
 
@@ -33,7 +34,7 @@ export class AuthController {
 
     this.setAuthCookies(res, authResult);
 
-    ApiResponse.success(res, { user: authResult.user }, 201);
+    this.created(res, { user: authResult.user });
   };
 
   public login = async (req: Request, res: Response): Promise<void> => {
@@ -46,7 +47,7 @@ export class AuthController {
 
     this.setAuthCookies(res, authResult);
 
-    ApiResponse.success(res, { user: authResult.user });
+    this.ok(res, { user: authResult.user });
   };
 
   public refresh = async (req: Request, res: Response): Promise<void> => {
@@ -58,7 +59,7 @@ export class AuthController {
 
     this.setAuthCookies(res, tokens);
 
-    ApiResponse.success(res, { refreshed: true });
+    this.ok(res, { refreshed: true });
   };
 
   public logout = async (req: Request, res: Response): Promise<void> => {
@@ -70,94 +71,67 @@ export class AuthController {
 
     this.clearAuthCookies(res);
 
-    ApiResponse.noContent(res);
+    this.noContent(res);
   };
 
   public me = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    if (!req.user) {
-      throw new HttpError(401, "Authentication is required");
-    }
-
-    const user = await this.authService.getMe(req.user.id);
-    ApiResponse.success(res, user);
+    const user = await this.authService.getMe(this.userId(req));
+    this.ok(res, user);
   };
 
   public updateMe = async (
     req: AuthenticatedRequest,
     res: Response,
   ): Promise<void> => {
-    if (!req.user) {
-      throw new HttpError(401, "Authentication is required");
-    }
-
     const payload = updateMeDto.parse(req.body);
-    const user = await this.authService.updateMe(req.user.id, payload);
+    const user = await this.authService.updateMe(this.userId(req), payload);
 
-    ApiResponse.success(res, user);
+    this.ok(res, user);
   };
 
   public changePassword = async (
     req: AuthenticatedRequest,
     res: Response,
   ): Promise<void> => {
-    if (!req.user) {
-      throw new HttpError(401, "Authentication is required");
-    }
-
     const payload = changePasswordDto.parse(req.body);
     await this.authService.changePassword(
-      req.user.id,
+      this.userId(req),
       payload.currentPassword,
       payload.newPassword,
     );
     this.clearAuthCookies(res);
 
-    ApiResponse.noContent(res);
+    this.noContent(res);
   };
 
   public getSessions = async (
     req: AuthenticatedRequest,
     res: Response,
   ): Promise<void> => {
-    if (!req.user) {
-      throw new HttpError(401, "Authentication is required");
-    }
-
-    const sessions = await this.authService.listSessions(req.user.id);
-    ApiResponse.success(res, sessions);
+    const sessions = await this.authService.listSessions(this.userId(req));
+    this.ok(res, sessions);
   };
 
   public logoutAll = async (
     req: AuthenticatedRequest,
     res: Response,
   ): Promise<void> => {
-    if (!req.user) {
-      throw new HttpError(401, "Authentication is required");
-    }
-
-    await this.authService.logoutAll(req.user.id);
+    await this.authService.logoutAll(this.userId(req));
     this.clearAuthCookies(res);
 
-    ApiResponse.noContent(res);
+    this.noContent(res);
   };
 
   public revokeSession = async (
     req: AuthenticatedRequest,
     res: Response,
   ): Promise<void> => {
-    if (!req.user) {
-      throw new HttpError(401, "Authentication is required");
-    }
+    await this.authService.revokeSession(
+      this.userId(req),
+      this.requiredParam(req, "id", "Invalid session id"),
+    );
 
-    const { id } = req.params;
-
-    if (typeof id !== "string") {
-      throw new HttpError(400, "Invalid session id");
-    }
-
-    await this.authService.revokeSession(req.user.id, id);
-
-    ApiResponse.noContent(res);
+    this.noContent(res);
   };
 
   private getRefreshToken(req: Request, required = true): string {

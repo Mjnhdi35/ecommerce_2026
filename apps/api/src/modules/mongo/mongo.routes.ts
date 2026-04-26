@@ -1,4 +1,4 @@
-import { BaseRoutes, RouteDefinition } from '../../shared/routes/base.routes';
+import { BaseRoutes } from '../../shared/routes/base.routes';
 import { AuthMiddleware } from '../auth/auth.middleware';
 import { MongoController } from './mongo.controller';
 
@@ -20,15 +20,6 @@ export class MongoRoutes extends BaseRoutes {
   }
 
   private initializeRoutes(): void {
-    this.router.get(
-      '/mongo-status',
-      this.authMiddleware.authenticate,
-      this.authMiddleware.requireRoles("admin"),
-      this.handle(this.mongoController, this.mongoController.getMongoStatus),
-    );
-  }
-
-  public getRoutes(): RouteDefinition[] {
-    return [{ method: "GET", path: "/mongo-status", access: "admin" }];
+    this.route("get", "/mongo-status", "admin", this.authMiddleware.authenticate, this.authMiddleware.requireRoles("admin"), this.mongoController.getMongoStatus);
   }
 }

@@ -1,4 +1,4 @@
-import { BaseRoutes, RouteDefinition } from "../../shared/routes/base.routes";
+import { BaseRoutes } from "../../shared/routes/base.routes";
 import { AuthMiddleware } from "../auth/auth.middleware";
 import { UserController } from "./user.controller";
 
@@ -20,45 +20,14 @@ export class UserRoutes extends BaseRoutes {
   }
 
   private initializeRoutes(): void {
-    this.router.use(
-      "/users",
-      this.authMiddleware.authenticate,
-      this.authMiddleware.requireRoles("admin"),
-    );
-    this.router.get(
-      "/users",
-      this.handle(this.userController, this.userController.getUsers),
-    );
-    this.router.get(
-      "/users/:id",
-      this.handle(this.userController, this.userController.getUserById),
-    );
-    this.router.post(
-      "/users",
-      this.handle(this.userController, this.userController.createUser),
-    );
-    this.router.put(
-      "/users/:id",
-      this.handle(this.userController, this.userController.updateUser),
-    );
-    this.router.patch(
-      "/users/:id/role",
-      this.handle(this.userController, this.userController.updateUserRole),
-    );
-    this.router.delete(
-      "/users/:id",
-      this.handle(this.userController, this.userController.deleteUser),
-    );
-  }
+    const admin = this.authMiddleware.requireRoles("admin");
+    const auth = this.authMiddleware.authenticate;
 
-  public getRoutes(): RouteDefinition[] {
-    return [
-      { method: "GET", path: "/users", access: "admin" },
-      { method: "GET", path: "/users/:id", access: "admin" },
-      { method: "POST", path: "/users", access: "admin" },
-      { method: "PUT", path: "/users/:id", access: "admin" },
-      { method: "PATCH", path: "/users/:id/role", access: "admin" },
-      { method: "DELETE", path: "/users/:id", access: "admin" },
-    ];
+    this.route("get", "/users", "admin", auth, admin, this.userController.getUsers);
+    this.route("get", "/users/:id", "admin", auth, admin, this.userController.getUserById);
+    this.route("post", "/users", "admin", auth, admin, this.userController.createUser);
+    this.route("put", "/users/:id", "admin", auth, admin, this.userController.updateUser);
+    this.route("patch", "/users/:id/role", "admin", auth, admin, this.userController.updateUserRole);
+    this.route("delete", "/users/:id", "admin", auth, admin, this.userController.deleteUser);
   }
 }

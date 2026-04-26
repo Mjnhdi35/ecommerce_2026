@@ -1,4 +1,4 @@
-import { BaseRoutes, RouteDefinition } from '../../shared/routes/base.routes';
+import { BaseRoutes } from '../../shared/routes/base.routes';
 import { HealthController } from './health.controller';
 
 export class HealthRoutes extends BaseRoutes {
@@ -11,13 +11,6 @@ export class HealthRoutes extends BaseRoutes {
   }
 
   private initializeRoutes(): void {
-    this.router.get(
-      '/health',
-      this.handle(this.healthController, this.healthController.getHealth),
-    );
-  }
-
-  public getRoutes(): RouteDefinition[] {
-    return [{ method: "GET", path: "/health", access: "public" }];
+    this.route("get", "/health", "public", this.healthController.getHealth);
   }
 }

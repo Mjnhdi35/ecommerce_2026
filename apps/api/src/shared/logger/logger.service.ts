@@ -54,7 +54,16 @@ export class Logger {
       return;
     }
 
+    if (this.isLogObject(data)) {
+      this.logger[level](data, message);
+      return;
+    }
+
     this.logger[level]({ data }, message);
+  }
+
+  private isLogObject(data: unknown): data is Record<string, unknown> {
+    return Boolean(data) && typeof data === "object" && !Array.isArray(data);
   }
 }
 

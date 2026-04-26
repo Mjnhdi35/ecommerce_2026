@@ -1,14 +1,15 @@
 import { Request, Response } from "express";
 import { HttpError } from "../../shared/errors/http-error";
-import { ApiResponse } from "../../shared/http/response";
+import { Controller } from "../../shared/http/controller";
 import { AuthenticatedRequest } from "../auth/auth.middleware";
 import { createPaymentIntentDto } from "./payment.dto";
 import { PaymentService } from "./payment.service";
 
-export class PaymentController {
+export class PaymentController extends Controller {
   private paymentService: PaymentService;
 
   constructor({ paymentService }: { paymentService: PaymentService }) {
+    super();
     this.paymentService = paymentService;
   }
 
@@ -20,19 +21,19 @@ export class PaymentController {
     const payment = await this.paymentService.createIntent({
       idempotencyKey: this.getIdempotencyKey(req),
       orderId: payload.orderId,
-      userId: this.getUserId(req),
+      userId: this.userId(req),
     });
 
-    ApiResponse.success(res, payment, 201);
+    this.created(res, payment);
   };
 
   public getPayments = async (
     req: AuthenticatedRequest,
     res: Response,
   ): Promise<void> => {
-    const payments = await this.paymentService.findByUserId(this.getUserId(req));
+    const payments = await this.paymentService.findByUserId(this.userId(req));
 
-    ApiResponse.success(res, payments);
+    this.ok(res, payments);
   };
 
   public getPaymentById = async (
@@ -40,11 +41,11 @@ export class PaymentController {
     res: Response,
   ): Promise<void> => {
     const payment = await this.paymentService.findByIdForUser(
-      this.getPaymentId(req),
-      this.getUserId(req),
+      this.requiredParam(req, "id", "Invalid payment id"),
+      this.userId(req),
     );
 
-    ApiResponse.success(res, payment);
+    this.ok(res, payment);
   };
 
   public confirmPayment = async (
@@ -52,11 +53,11 @@ export class PaymentController {
     res: Response,
   ): Promise<void> => {
     const payment = await this.paymentService.confirm(
-      this.getPaymentId(req),
-      this.getUserId(req),
+      this.requiredParam(req, "id", "Invalid payment id"),
+      this.userId(req),
     );
 
-    ApiResponse.success(res, payment);
+    this.ok(res, payment);
   };
 
   private getIdempotencyKey(req: Request): string {
@@ -71,23 +72,5 @@ export class PaymentController {
     }
 
     return value.trim();
-  }
-
-  private getPaymentId(req: Request): string {
-    const { id } = req.params;
-
-    if (typeof id !== "string") {
-      throw new HttpError(400, "Invalid payment id");
-    }
-
-    return id;
-  }
-
-  private getUserId(req: AuthenticatedRequest): string {
-    if (!req.user) {
-      throw new HttpError(401, "Authentication is required");
-    }
-
-    return req.user.id;
   }
 }

@@ -38,7 +38,9 @@ export class MongoService {
       const stats = await this.db.stats();
       const collections = await this.db.listCollections().toArray();
 
-      this.logger.info(`Connected to database: ${environment.DB_NAME}`);
+      this.logger.debug("MongoDB status checked", {
+        database: environment.DB_NAME,
+      });
 
       return {
         database: environment.DB_NAME,

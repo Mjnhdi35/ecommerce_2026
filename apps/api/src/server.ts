@@ -14,7 +14,7 @@ const shutdown = async (signal: string): Promise<void> => {
   logger.info(`Received ${signal}. Graceful shutdown...`);
 
   try {
-    if (httpServer) {
+    if (httpServer?.listening) {
       await new Promise<void>((resolve, reject) => {
         httpServer?.close((error) => {
           if (error) {

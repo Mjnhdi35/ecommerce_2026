@@ -20,7 +20,9 @@ export class HealthService {
     try {
       const dbConnected = await this.mongoConnection.ping();
 
-      this.logger.info('Health check performed', { databaseConnected: dbConnected });
+      if (!dbConnected) {
+        this.logger.warn("Health check degraded", { databaseConnected: false });
+      }
 
       return {
         status: dbConnected ? "ok" : "degraded",
@@ -28,7 +30,7 @@ export class HealthService {
         databaseConnected: dbConnected,
       };
     } catch (error) {
-      this.logger.error('Health check failed', error);
+      this.logger.error("Health check failed", error);
 
       return {
         status: "degraded",

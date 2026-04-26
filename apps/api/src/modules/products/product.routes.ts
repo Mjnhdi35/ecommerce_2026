@@ -1,4 +1,4 @@
-import { BaseRoutes, RouteDefinition } from "../../shared/routes/base.routes";
+import { BaseRoutes } from "../../shared/routes/base.routes";
 import { AuthMiddleware } from "../auth/auth.middleware";
 import { ProductController } from "./product.controller";
 
@@ -20,46 +20,14 @@ export class ProductRoutes extends BaseRoutes {
   }
 
   private initializeRoutes(): void {
-    this.router.get(
-      "/products",
-      this.handle(this.productController, this.productController.getProducts),
-    );
-    this.router.get(
-      "/products/slug/:slug",
-      this.handle(this.productController, this.productController.getProductBySlug),
-    );
-    this.router.get(
-      "/products/:id",
-      this.handle(this.productController, this.productController.getProductById),
-    );
+    const admin = this.authMiddleware.requireRoles("admin");
+    const auth = this.authMiddleware.authenticate;
 
-    this.router.use(
-      "/products",
-      this.authMiddleware.authenticate,
-      this.authMiddleware.requireRoles("admin"),
-    );
-    this.router.post(
-      "/products",
-      this.handle(this.productController, this.productController.createProduct),
-    );
-    this.router.put(
-      "/products/:id",
-      this.handle(this.productController, this.productController.updateProduct),
-    );
-    this.router.delete(
-      "/products/:id",
-      this.handle(this.productController, this.productController.deleteProduct),
-    );
-  }
-
-  public getRoutes(): RouteDefinition[] {
-    return [
-      { method: "GET", path: "/products", access: "public" },
-      { method: "GET", path: "/products/slug/:slug", access: "public" },
-      { method: "GET", path: "/products/:id", access: "public" },
-      { method: "POST", path: "/products", access: "admin" },
-      { method: "PUT", path: "/products/:id", access: "admin" },
-      { method: "DELETE", path: "/products/:id", access: "admin" },
-    ];
+    this.route("get", "/products", "public", this.productController.getProducts);
+    this.route("get", "/products/slug/:slug", "public", this.productController.getProductBySlug);
+    this.route("get", "/products/:id", "public", this.productController.getProductById);
+    this.route("post", "/products", "admin", auth, admin, this.productController.createProduct);
+    this.route("put", "/products/:id", "admin", auth, admin, this.productController.updateProduct);
+    this.route("delete", "/products/:id", "admin", auth, admin, this.productController.deleteProduct);
   }
 }

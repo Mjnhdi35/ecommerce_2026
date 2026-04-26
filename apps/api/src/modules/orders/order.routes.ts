@@ -1,5 +1,5 @@
 import { AuthMiddleware } from "../auth/auth.middleware";
-import { BaseRoutes, RouteDefinition } from "../../shared/routes/base.routes";
+import { BaseRoutes } from "../../shared/routes/base.routes";
 import { OrderController } from "./order.controller";
 
 export class OrderRoutes extends BaseRoutes {
@@ -20,31 +20,11 @@ export class OrderRoutes extends BaseRoutes {
   }
 
   private initializeRoutes(): void {
-    this.router.use("/orders", this.authMiddleware.authenticate);
-    this.router.get(
-      "/orders",
-      this.handle(this.orderController, this.orderController.getOrders),
-    );
-    this.router.post(
-      "/orders",
-      this.handle(this.orderController, this.orderController.createOrder),
-    );
-    this.router.get(
-      "/orders/:id",
-      this.handle(this.orderController, this.orderController.getOrderById),
-    );
-    this.router.patch(
-      "/orders/:id/cancel",
-      this.handle(this.orderController, this.orderController.cancelOrder),
-    );
-  }
+    const auth = this.authMiddleware.authenticate;
 
-  public getRoutes(): RouteDefinition[] {
-    return [
-      { method: "GET", path: "/orders", access: "authenticated" },
-      { method: "POST", path: "/orders", access: "authenticated" },
-      { method: "GET", path: "/orders/:id", access: "authenticated" },
-      { method: "PATCH", path: "/orders/:id/cancel", access: "authenticated" },
-    ];
+    this.route("get", "/orders", "authenticated", auth, this.orderController.getOrders);
+    this.route("post", "/orders", "authenticated", auth, this.orderController.createOrder);
+    this.route("get", "/orders/:id", "authenticated", auth, this.orderController.getOrderById);
+    this.route("patch", "/orders/:id/cancel", "authenticated", auth, this.orderController.cancelOrder);
   }
 }

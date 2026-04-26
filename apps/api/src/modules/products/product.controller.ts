@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import { HttpError } from "../../shared/errors/http-error";
-import { ApiResponse } from "../../shared/http/response";
+import { Controller } from "../../shared/http/controller";
 import {
   createProductDto,
   productQueryDto,
@@ -8,10 +7,11 @@ import {
 } from "./product.dto";
 import { ProductService } from "./product.service";
 
-export class ProductController {
+export class ProductController extends Controller {
   private productService: ProductService;
 
   constructor({ productService }: { productService: ProductService }) {
+    super();
     this.productService = productService;
   }
 
@@ -19,57 +19,50 @@ export class ProductController {
     const query = productQueryDto.parse(req.query);
     const products = await this.productService.findAll(query);
 
-    ApiResponse.success(res, products);
+    this.ok(res, products);
   };
 
   public getProductById = async (req: Request, res: Response): Promise<void> => {
-    const product = await this.productService.findById(this.getIdParam(req));
+    const product = await this.productService.findById(
+      this.requiredParam(req, "id", "Invalid product id"),
+    );
 
-    ApiResponse.success(res, product);
+    this.ok(res, product);
   };
 
   public getProductBySlug = async (
     req: Request,
     res: Response,
   ): Promise<void> => {
-    const { slug } = req.params;
+    const product = await this.productService.findBySlug(
+      this.requiredParam(req, "slug", "Invalid product slug"),
+    );
 
-    if (typeof slug !== "string") {
-      throw new HttpError(400, "Invalid product slug");
-    }
-
-    const product = await this.productService.findBySlug(slug);
-
-    ApiResponse.success(res, product);
+    this.ok(res, product);
   };
 
   public createProduct = async (req: Request, res: Response): Promise<void> => {
     const payload = createProductDto.parse(req.body);
     const product = await this.productService.create(payload);
 
-    ApiResponse.success(res, product, 201);
+    this.created(res, product);
   };
 
   public updateProduct = async (req: Request, res: Response): Promise<void> => {
     const payload = updateProductDto.parse(req.body);
-    const product = await this.productService.update(this.getIdParam(req), payload);
+    const product = await this.productService.update(
+      this.requiredParam(req, "id", "Invalid product id"),
+      payload,
+    );
 
-    ApiResponse.success(res, product);
+    this.ok(res, product);
   };
 
   public deleteProduct = async (req: Request, res: Response): Promise<void> => {
-    await this.productService.delete(this.getIdParam(req));
+    await this.productService.delete(
+      this.requiredParam(req, "id", "Invalid product id"),
+    );
 
-    ApiResponse.noContent(res);
+    this.noContent(res);
   };
-
-  private getIdParam(req: Request): string {
-    const { id } = req.params;
-
-    if (typeof id !== "string") {
-      throw new HttpError(400, "Invalid product id");
-    }
-
-    return id;
-  }
 }

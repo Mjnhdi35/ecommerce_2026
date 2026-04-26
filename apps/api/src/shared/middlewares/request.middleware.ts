@@ -24,9 +24,11 @@ export class RequestMiddleware {
       }
 
       const durationMs = this.getDurationMs(startedAt);
-      this.logger.error(
-        `[${requestId}] ${req.method} ${req.originalUrl} timed out after ${durationMs}ms`,
-      );
+      this.logger.error("Request timed out", this.getLogFields(req, {
+        durationMs,
+        requestId,
+        statusCode: 503,
+      }));
       ApiResponse.error(
         res,
         "Request timeout",
@@ -36,36 +38,49 @@ export class RequestMiddleware {
       );
     }, environment.REQUEST_TIMEOUT_MS);
 
+    let logged = false;
     const clearRequestTimeout = () => {
       clearTimeout(timeout);
     };
 
-    res.on("finish", () => {
+    const logRequest = (closedEarly = false) => {
+      if (logged) {
+        return;
+      }
+
+      logged = true;
       clearRequestTimeout();
       const durationMs = this.getDurationMs(startedAt);
+      const statusCode = closedEarly && !res.writableEnded ? 499 : res.statusCode;
+      const fields = this.getLogFields(req, {
+        closedEarly,
+        durationMs,
+        requestId,
+        statusCode,
+      });
 
       if (
         durationMs < environment.SLOW_REQUEST_MS &&
-        res.statusCode < 400
+        statusCode < 400
       ) {
         return;
       }
 
-      const message = `[${requestId}] ${req.method} ${req.originalUrl} ${res.statusCode} ${durationMs}ms`;
-
-      if (res.statusCode >= 500) {
-        this.logger.error(message);
+      if (statusCode >= 500 || statusCode === 499) {
+        this.logger.error("Request failed", fields);
         return;
       }
 
-      if (res.statusCode >= 400) {
-        this.logger.warn(message);
+      if (statusCode >= 400) {
+        this.logger.warn("Request rejected", fields);
         return;
       }
 
-      this.logger.warn(`Slow request: ${message}`);
-    });
-    res.on("close", clearRequestTimeout);
+      this.logger.warn("Slow request", fields);
+    };
+
+    res.once("finish", () => logRequest());
+    res.once("close", () => logRequest(true));
 
     next();
   };
@@ -86,5 +101,21 @@ export class RequestMiddleware {
     }
 
     return crypto.randomUUID();
+  }
+
+  private getLogFields(
+    req: Request,
+    fields: {
+      closedEarly?: boolean;
+      durationMs: number;
+      requestId: string;
+      statusCode: number;
+    },
+  ): Record<string, unknown> {
+    return {
+      ...fields,
+      method: req.method,
+      path: req.originalUrl,
+    };
   }
 }

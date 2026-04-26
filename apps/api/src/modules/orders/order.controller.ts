@@ -1,13 +1,13 @@
 import { Response } from "express";
-import { HttpError } from "../../shared/errors/http-error";
-import { ApiResponse } from "../../shared/http/response";
+import { Controller } from "../../shared/http/controller";
 import { AuthenticatedRequest } from "../auth/auth.middleware";
 import { OrderService } from "./order.service";
 
-export class OrderController {
+export class OrderController extends Controller {
   private orderService: OrderService;
 
   constructor({ orderService }: { orderService: OrderService }) {
+    super();
     this.orderService = orderService;
   }
 
@@ -15,18 +15,18 @@ export class OrderController {
     req: AuthenticatedRequest,
     res: Response,
   ): Promise<void> => {
-    const order = await this.orderService.createFromCart(this.getUserId(req));
+    const order = await this.orderService.createFromCart(this.userId(req));
 
-    ApiResponse.success(res, order, 201);
+    this.created(res, order);
   };
 
   public getOrders = async (
     req: AuthenticatedRequest,
     res: Response,
   ): Promise<void> => {
-    const orders = await this.orderService.findByUserId(this.getUserId(req));
+    const orders = await this.orderService.findByUserId(this.userId(req));
 
-    ApiResponse.success(res, orders);
+    this.ok(res, orders);
   };
 
   public getOrderById = async (
@@ -34,37 +34,22 @@ export class OrderController {
     res: Response,
   ): Promise<void> => {
     const order = await this.orderService.findByIdForUser(
-      this.getOrderId(req),
-      this.getUserId(req),
+      this.requiredParam(req, "id", "Invalid order id"),
+      this.userId(req),
     );
 
-    ApiResponse.success(res, order);
+    this.ok(res, order);
   };
 
   public cancelOrder = async (
     req: AuthenticatedRequest,
     res: Response,
   ): Promise<void> => {
-    await this.orderService.cancel(this.getOrderId(req), this.getUserId(req));
+    await this.orderService.cancel(
+      this.requiredParam(req, "id", "Invalid order id"),
+      this.userId(req),
+    );
 
-    ApiResponse.noContent(res);
+    this.noContent(res);
   };
-
-  private getOrderId(req: AuthenticatedRequest): string {
-    const { id } = req.params;
-
-    if (typeof id !== "string") {
-      throw new HttpError(400, "Invalid order id");
-    }
-
-    return id;
-  }
-
-  private getUserId(req: AuthenticatedRequest): string {
-    if (!req.user) {
-      throw new HttpError(401, "Authentication is required");
-    }
-
-    return req.user.id;
-  }
 }

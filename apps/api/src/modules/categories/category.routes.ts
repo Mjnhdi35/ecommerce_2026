@@ -1,5 +1,5 @@
 import { AuthMiddleware } from "../auth/auth.middleware";
-import { BaseRoutes, RouteDefinition } from "../../shared/routes/base.routes";
+import { BaseRoutes } from "../../shared/routes/base.routes";
 import { CategoryController } from "./category.controller";
 
 export class CategoryRoutes extends BaseRoutes {
@@ -20,46 +20,14 @@ export class CategoryRoutes extends BaseRoutes {
   }
 
   private initializeRoutes(): void {
-    this.router.get(
-      "/categories",
-      this.handle(this.categoryController, this.categoryController.getCategories),
-    );
-    this.router.get(
-      "/categories/slug/:slug",
-      this.handle(this.categoryController, this.categoryController.getCategoryBySlug),
-    );
-    this.router.get(
-      "/categories/:id",
-      this.handle(this.categoryController, this.categoryController.getCategoryById),
-    );
+    const admin = this.authMiddleware.requireRoles("admin");
+    const auth = this.authMiddleware.authenticate;
 
-    this.router.use(
-      "/categories",
-      this.authMiddleware.authenticate,
-      this.authMiddleware.requireRoles("admin"),
-    );
-    this.router.post(
-      "/categories",
-      this.handle(this.categoryController, this.categoryController.createCategory),
-    );
-    this.router.put(
-      "/categories/:id",
-      this.handle(this.categoryController, this.categoryController.updateCategory),
-    );
-    this.router.delete(
-      "/categories/:id",
-      this.handle(this.categoryController, this.categoryController.archiveCategory),
-    );
-  }
-
-  public getRoutes(): RouteDefinition[] {
-    return [
-      { method: "GET", path: "/categories", access: "public" },
-      { method: "GET", path: "/categories/slug/:slug", access: "public" },
-      { method: "GET", path: "/categories/:id", access: "public" },
-      { method: "POST", path: "/categories", access: "admin" },
-      { method: "PUT", path: "/categories/:id", access: "admin" },
-      { method: "DELETE", path: "/categories/:id", access: "admin" },
-    ];
+    this.route("get", "/categories", "public", this.categoryController.getCategories);
+    this.route("get", "/categories/slug/:slug", "public", this.categoryController.getCategoryBySlug);
+    this.route("get", "/categories/:id", "public", this.categoryController.getCategoryById);
+    this.route("post", "/categories", "admin", auth, admin, this.categoryController.createCategory);
+    this.route("put", "/categories/:id", "admin", auth, admin, this.categoryController.updateCategory);
+    this.route("delete", "/categories/:id", "admin", auth, admin, this.categoryController.archiveCategory);
   }
 }

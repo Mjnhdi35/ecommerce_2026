@@ -15,12 +15,10 @@ export class ErrorMiddleware {
 
   public handle = (
     error: Error,
-    _req: Request,
+    req: Request,
     res: Response,
     _next: NextFunction,
   ): void => {
-    this.logger.error(error.message, error);
-
     if (res.headersSent) {
       return;
     }
@@ -37,6 +35,13 @@ export class ErrorMiddleware {
     }
 
     if (error instanceof HttpError) {
+      this.logServerError(
+        error,
+        req,
+        res,
+        error.statusCode,
+        error.errorCode || `HTTP_${error.statusCode}`,
+      );
       ApiResponse.error(
         res,
         error.message,
@@ -48,6 +53,7 @@ export class ErrorMiddleware {
     }
 
     if (error instanceof MongoServerError && error.code === 11000) {
+      this.logServerError(error, req, res, 409, "DUPLICATE_RESOURCE");
       ApiResponse.error(
         res,
         "Duplicate resource",
@@ -59,6 +65,7 @@ export class ErrorMiddleware {
     }
 
     if (error instanceof SyntaxError && "body" in error) {
+      this.logServerError(error, req, res, 400, "INVALID_JSON_BODY");
       ApiResponse.error(
         res,
         "Invalid JSON body",
@@ -69,6 +76,7 @@ export class ErrorMiddleware {
       return;
     }
 
+    this.logServerError(error, req, res, 500, "INTERNAL_SERVER_ERROR");
     ApiResponse.error(
       res,
       "Internal server error",
@@ -77,4 +85,25 @@ export class ErrorMiddleware {
       "INTERNAL_SERVER_ERROR",
     );
   };
+
+  private logServerError(
+    error: Error,
+    req: Request,
+    res: Response,
+    statusCode: number,
+    errorCode: string,
+  ): void {
+    if (statusCode < 500) {
+      return;
+    }
+
+    this.logger.error("Unhandled request error", {
+      err: error,
+      errorCode,
+      method: req.method,
+      path: req.originalUrl,
+      requestId: res.locals.requestId,
+      statusCode,
+    });
+  }
 }
