@@ -5,6 +5,7 @@ import {
   MongoServerError,
   ServerApiVersion,
 } from "mongodb";
+import { environment } from "../config/environment";
 import { Logger, LoggerFactory } from "../shared/logger/logger.service";
 
 interface MongoConfig {
@@ -22,14 +23,9 @@ export class MongoConnection {
 
   constructor({ loggerFactory }: { loggerFactory: LoggerFactory }) {
     this.logger = loggerFactory.create("Database");
-    const mongoUrl = process.env.MONGO_URL;
-    if (!mongoUrl) {
-      throw new Error("MONGO_URL is required");
-    }
-
     this.config = {
-      url: mongoUrl,
-      dbName: process.env.DB_NAME || undefined,
+      url: environment.MONGO_URL,
+      dbName: environment.DB_NAME,
       options: {
         serverApi: {
           version: ServerApiVersion.v1,
@@ -89,6 +85,11 @@ export class MongoConnection {
     if (!collectionNames.has("refresh_tokens")) {
       await db.createCollection("refresh_tokens");
       this.logger.info('Created initial "refresh_tokens" collection');
+    }
+
+    if (!collectionNames.has("bootstrap_locks")) {
+      await db.createCollection("bootstrap_locks");
+      this.logger.info('Created initial "bootstrap_locks" collection');
     }
 
     if (!collectionNames.has("products")) {

@@ -17,8 +17,7 @@ const environmentSchema = z.object({
     .string()
     .url({
       message: "MONGO_URL must be a valid MongoDB connection URL",
-    })
-    .optional(),
+    }),
 
   DB_NAME: z.string().min(1, "DB_NAME is required").default("ecommerce"),
 
@@ -26,9 +25,9 @@ const environmentSchema = z.object({
 
   JWT_REFRESH_SECRET: z.string().min(32, "JWT_REFRESH_SECRET must be at least 32 characters"),
 
-  JWT_ACCESS_EXPIRES_IN: z.string().min(1).default("15m"),
+  JWT_ACCESS_EXPIRES_IN: z.string().regex(/^\d+[smhd]$/).default("15m"),
 
-  JWT_REFRESH_EXPIRES_IN: z.string().min(1).default("7d"),
+  JWT_REFRESH_EXPIRES_IN: z.string().regex(/^\d+[smhd]$/).default("7d"),
 });
 
 const env = process.env;

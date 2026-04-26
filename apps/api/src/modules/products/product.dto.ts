@@ -1,18 +1,31 @@
 import { z } from "zod";
 import { PRODUCT_STATUSES } from "./product.model";
 
-export const createProductDto = z.object({
+const requestNumberDto = z.union([
+  z.number(),
+  z.string().trim().min(1).pipe(z.coerce.number()),
+]);
+
+const priceDto = requestNumberDto.pipe(z.number().finite().min(0));
+const stockDto = requestNumberDto.pipe(z.number().int().min(0));
+
+const productPayloadDto = z.object({
   name: z.string().trim().min(1),
   slug: z.string().trim().min(1).optional(),
   description: z.string().trim().optional(),
-  price: z.coerce.number().min(0),
-  stock: z.coerce.number().int().min(0),
+  price: priceDto,
+  stock: stockDto,
   category: z.string().trim().min(1).optional(),
+  images: z.array(z.url()).optional(),
+  status: z.enum(PRODUCT_STATUSES).optional(),
+});
+
+export const createProductDto = productPayloadDto.extend({
   images: z.array(z.url()).default([]),
   status: z.enum(PRODUCT_STATUSES).default("draft"),
 });
 
-export const updateProductDto = createProductDto.partial().refine(
+export const updateProductDto = productPayloadDto.partial().refine(
   (data) => Object.keys(data).length > 0,
   { message: "At least one field is required" },
 );

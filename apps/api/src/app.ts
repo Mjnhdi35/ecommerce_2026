@@ -1,4 +1,5 @@
 import express, { Express } from "express";
+import cookieParser from "cookie-parser";
 import { environment } from "./config/environment";
 import { ApiRoutes } from "./routes";
 import { ApiResponse } from "./shared/http/response";
@@ -45,6 +46,7 @@ export class App {
   private setupMiddleware(): void {
     this.app.disable("x-powered-by");
     this.app.use(this.requestMiddleware.handle);
+    this.app.use(cookieParser());
     this.app.use(express.json({ limit: environment.BODY_LIMIT }));
     this.app.use(
       express.urlencoded({ extended: true, limit: environment.BODY_LIMIT }),

@@ -97,7 +97,7 @@ export class ProductService {
     const now = new Date();
     const document: OptionalId<Product> = {
       ...input,
-      slug: input.slug || this.createSlug(input.name),
+      slug: this.createSlug(input.slug || input.name),
       images: input.images || [],
       status: input.status || "draft",
       createdAt: now,
@@ -121,8 +121,8 @@ export class ProductService {
       updatedAt: new Date(),
     };
 
-    if (input.name && !input.slug) {
-      update.slug = this.createSlug(input.name);
+    if (input.slug || input.name) {
+      update.slug = this.createSlug(input.slug || input.name || "");
     }
 
     try {
@@ -161,9 +161,11 @@ export class ProductService {
     }
 
     if (query.search) {
+      const escapedSearch = this.escapeRegex(query.search);
+
       filter.$or = [
-        { name: { $regex: query.search, $options: "i" } },
-        { description: { $regex: query.search, $options: "i" } },
+        { name: { $regex: escapedSearch, $options: "i" } },
+        { description: { $regex: escapedSearch, $options: "i" } },
       ];
     }
 
@@ -171,11 +173,23 @@ export class ProductService {
   }
 
   private createSlug(value: string): string {
-    return value
+    const slug = value
       .trim()
       .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
+
+    if (!slug) {
+      throw new HttpError(400, "Product slug is invalid");
+    }
+
+    return slug;
+  }
+
+  private escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
   private toObjectId(id: string): ObjectId {

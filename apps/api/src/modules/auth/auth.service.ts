@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
-import { Collection, Db, ObjectId, WithId } from "mongodb";
+import { Collection, Db, MongoServerError, ObjectId, WithId } from "mongodb";
 import { environment } from "../../config/environment";
 import { RefreshToken } from "./refresh-token.model";
 import { User, UserRole } from "../users/user.model";
@@ -14,6 +14,13 @@ import {
 import { HttpError } from "../../shared/errors/http-error";
 
 const REFRESH_TOKEN_COLLECTION = "refresh_tokens";
+const BOOTSTRAP_LOCK_COLLECTION = "bootstrap_locks";
+const FIRST_ADMIN_LOCK_ID = "first-admin";
+
+interface BootstrapLock {
+  _id: string;
+  createdAt: Date;
+}
 
 interface TokenPayload extends JwtPayload {
   sub: string;
@@ -38,6 +45,7 @@ export interface AuthResult extends AuthTokens {
 }
 
 export class AuthService {
+  private bootstrapLocks: Collection<BootstrapLock>;
   private refreshTokens: Collection<RefreshToken>;
   private userService: UserService;
 
@@ -48,6 +56,9 @@ export class AuthService {
     db: Db;
     userService: UserService;
   }) {
+    this.bootstrapLocks = db.collection<BootstrapLock>(
+      BOOTSTRAP_LOCK_COLLECTION,
+    );
     this.refreshTokens = db.collection<RefreshToken>(
       REFRESH_TOKEN_COLLECTION,
     );
@@ -55,11 +66,17 @@ export class AuthService {
   }
 
   public async register(input: CreateUserInput): Promise<AuthResult> {
-    const userCount = await this.userService.count();
-    const user = await this.userService.create({
+    let user = await this.userService.create({
       ...input,
-      role: userCount === 0 ? "admin" : "user",
+      role: "user",
     });
+
+    if (await this.shouldPromoteFirstAdmin()) {
+      user = await this.userService.update(user._id.toHexString(), {
+        role: "admin",
+      });
+    }
+
     const tokens = await this.issueTokenPair(user);
 
     return {
@@ -94,19 +111,26 @@ export class AuthService {
     const payload = this.verifyRefreshToken(refreshToken);
     const tokenHash = this.hashToken(refreshToken);
 
-    const storedToken = await this.refreshTokens.findOne({
-      tokenHash,
-      userId: new ObjectId(payload.sub),
-      revokedAt: { $exists: false },
-      expiresAt: { $gt: new Date() },
-    });
+    const storedToken = await this.refreshTokens.findOneAndUpdate(
+      {
+        tokenHash,
+        userId: new ObjectId(payload.sub),
+        revokedAt: { $exists: false },
+        expiresAt: { $gt: new Date() },
+      },
+      {
+        $set: {
+          revokedAt: new Date(),
+        },
+      },
+      { returnDocument: "before" },
+    );
 
     if (!storedToken) {
       throw new HttpError(401, "Invalid refresh token");
     }
 
     const user = await this.userService.findById(payload.sub);
-    await this.revokeRefreshToken(tokenHash);
 
     return this.issueTokenPair(user);
   }
@@ -132,13 +156,40 @@ export class AuthService {
     newPassword: string,
   ): Promise<void> {
     await this.userService.changePassword(userId, currentPassword, newPassword);
+    await this.revokeRefreshTokensByUserId(userId);
+  }
+
+  public async authenticateAccessToken(accessToken: string): Promise<AuthUser> {
+    const tokenUser = this.verifyAccessToken(accessToken);
+
+    try {
+      const user = await this.userService.findById(tokenUser.id);
+
+      return {
+        id: user._id.toHexString(),
+        email: user.email,
+        role: user.role,
+      };
+    } catch (error) {
+      if (error instanceof HttpError && error.statusCode === 404) {
+        throw new HttpError(401, "Invalid access token");
+      }
+
+      throw error;
+    }
   }
 
   public verifyAccessToken(accessToken: string): AuthUser {
-    const payload = jwt.verify(
-      accessToken,
-      environment.JWT_ACCESS_SECRET,
-    ) as TokenPayload;
+    let payload: TokenPayload;
+
+    try {
+      payload = jwt.verify(
+        accessToken,
+        environment.JWT_ACCESS_SECRET,
+      ) as TokenPayload;
+    } catch {
+      throw new HttpError(401, "Invalid access token");
+    }
 
     if (payload.type !== "access" || !payload.sub) {
       throw new HttpError(401, "Invalid access token");
@@ -204,10 +255,16 @@ export class AuthService {
   }
 
   private verifyRefreshToken(refreshToken: string): TokenPayload {
-    const payload = jwt.verify(
-      refreshToken,
-      environment.JWT_REFRESH_SECRET,
-    ) as TokenPayload;
+    let payload: TokenPayload;
+
+    try {
+      payload = jwt.verify(
+        refreshToken,
+        environment.JWT_REFRESH_SECRET,
+      ) as TokenPayload;
+    } catch {
+      throw new HttpError(401, "Invalid refresh token");
+    }
 
     if (payload.type !== "refresh" || !payload.sub) {
       throw new HttpError(401, "Invalid refresh token");
@@ -216,10 +273,44 @@ export class AuthService {
     return payload;
   }
 
+  private async shouldPromoteFirstAdmin(): Promise<boolean> {
+    if ((await this.userService.countByRole("admin")) > 0) {
+      return false;
+    }
+
+    try {
+      await this.bootstrapLocks.insertOne({
+        _id: FIRST_ADMIN_LOCK_ID,
+        createdAt: new Date(),
+      });
+      return true;
+    } catch (error) {
+      if (error instanceof MongoServerError && error.code === 11000) {
+        return false;
+      }
+
+      throw error;
+    }
+  }
+
   private async revokeRefreshToken(tokenHash: string): Promise<void> {
     await this.refreshTokens.updateOne(
       {
         tokenHash,
+        revokedAt: { $exists: false },
+      },
+      {
+        $set: {
+          revokedAt: new Date(),
+        },
+      },
+    );
+  }
+
+  private async revokeRefreshTokensByUserId(userId: string): Promise<void> {
+    await this.refreshTokens.updateMany(
+      {
+        userId: new ObjectId(userId),
         revokedAt: { $exists: false },
       },
       {

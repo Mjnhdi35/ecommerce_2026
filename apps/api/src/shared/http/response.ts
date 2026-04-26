@@ -19,6 +19,10 @@ export class ApiResponse {
     statusCode = 200,
     message?: string,
   ): void {
+    if (res.headersSent) {
+      return;
+    }
+
     const body: SuccessResponse<T> = {
       success: true,
     };
@@ -40,6 +44,10 @@ export class ApiResponse {
     statusCode = 500,
     errors?: unknown,
   ): void {
+    if (res.headersSent) {
+      return;
+    }
+
     const body: ErrorResponse = {
       success: false,
       message,
@@ -53,6 +61,10 @@ export class ApiResponse {
   }
 
   public static noContent(res: Response): void {
+    if (res.headersSent) {
+      return;
+    }
+
     res.status(204).send();
   }
 }

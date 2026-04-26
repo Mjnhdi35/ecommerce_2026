@@ -36,6 +36,10 @@ export class UserService {
     return this.collection.countDocuments();
   }
 
+  public async countByRole(role: UserRole): Promise<number> {
+    return this.collection.countDocuments({ role });
+  }
+
   public async findById(id: string): Promise<PublicUser> {
     const user = await this.collection.findOne({ _id: this.toObjectId(id) });
 
@@ -57,13 +61,14 @@ export class UserService {
   }
 
   public async findByEmailWithPassword(email: string): Promise<WithId<User> | null> {
-    return this.collection.findOne({ email });
+    return this.collection.findOne({ email: this.normalizeEmail(email) });
   }
 
   public async create(input: CreateUserInput): Promise<PublicUser> {
     const now = new Date();
     const document: OptionalId<User> = {
       ...input,
+      email: this.normalizeEmail(input.email),
       password: await bcrypt.hash(input.password, SALT_ROUNDS),
       role: input.role || "user",
       createdAt: now,
@@ -103,10 +108,16 @@ export class UserService {
   }
 
   public async update(id: string, input: UpdateUserInput): Promise<PublicUser> {
+    await this.assertUpdateIsAllowed(id, input);
+
     const update: UpdateUserInput & { updatedAt: Date } = {
       ...input,
       updatedAt: new Date(),
     };
+
+    if (input.email) {
+      update.email = this.normalizeEmail(input.email);
+    }
 
     if (input.password) {
       update.password = await bcrypt.hash(input.password, SALT_ROUNDS);
@@ -131,11 +142,26 @@ export class UserService {
   }
 
   public async delete(id: string): Promise<void> {
-    const result = await this.collection.deleteOne({ _id: this.toObjectId(id) });
+    const objectId = this.toObjectId(id);
+    const user = await this.collection.findOne({ _id: objectId });
+
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
+    if (user.role === "admin" && await this.isLastAdmin()) {
+      throw new HttpError(400, "Cannot delete the last admin user");
+    }
+
+    const result = await this.collection.deleteOne({ _id: objectId });
 
     if (result.deletedCount === 0) {
       throw new HttpError(404, "User not found");
     }
+  }
+
+  public async isLastAdmin(): Promise<boolean> {
+    return (await this.countByRole("admin")) <= 1;
   }
 
   private toObjectId(id: string): ObjectId {
@@ -149,6 +175,29 @@ export class UserService {
   private toPublicUser(user: WithId<User>): PublicUser {
     const { password, ...publicUser } = user;
     return publicUser;
+  }
+
+  private async assertUpdateIsAllowed(
+    id: string,
+    input: UpdateUserInput,
+  ): Promise<void> {
+    if (!input.role || input.role === "admin") {
+      return;
+    }
+
+    const user = await this.collection.findOne({ _id: this.toObjectId(id) });
+
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
+    if (user.role === "admin" && await this.isLastAdmin()) {
+      throw new HttpError(400, "Cannot demote the last admin user");
+    }
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
   }
 
   private handleWriteError(error: unknown): never {

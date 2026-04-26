@@ -23,24 +23,17 @@ export class HealthService {
       this.logger.info('Health check performed', { databaseConnected: dbConnected });
 
       return {
+        status: dbConnected ? "ok" : "degraded",
         timestamp: new Date().toISOString(),
-        nodeVersion: process.version,
-        env: process.env.NODE_ENV || "No Environment",
         databaseConnected: dbConnected,
-        uptime: process.uptime(),
-        memoryUsage: process.memoryUsage(),
       };
     } catch (error) {
       this.logger.error('Health check failed', error);
 
       return {
+        status: "degraded",
         timestamp: new Date().toISOString(),
-        nodeVersion: process.version,
-        env: process.env.NODE_ENV || "No Environment",
         databaseConnected: false,
-        uptime: process.uptime(),
-        memoryUsage: process.memoryUsage(),
-        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   };

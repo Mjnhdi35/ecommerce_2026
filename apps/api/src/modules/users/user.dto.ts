@@ -3,7 +3,7 @@ import { USER_ROLES } from "./user.model";
 
 export const createUserDto = z.object({
   username: z.string().trim().min(1),
-  email: z.email().trim(),
+  email: z.email().trim().toLowerCase(),
   password: z.string().min(6),
   role: z.enum(USER_ROLES).optional(),
 });
