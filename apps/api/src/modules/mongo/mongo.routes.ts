@@ -1,4 +1,4 @@
-import { BaseRoutes } from '../../shared/routes/base.routes';
+import { BaseRoutes, RouteDefinition } from '../../shared/routes/base.routes';
 import { MongoController } from './mongo.controller';
 
 export class MongoRoutes extends BaseRoutes {
@@ -15,5 +15,9 @@ export class MongoRoutes extends BaseRoutes {
       '/mongo-status',
       this.handle(this.mongoController, this.mongoController.getMongoStatus),
     );
+  }
+
+  public getRoutes(): RouteDefinition[] {
+    return [{ method: "GET", path: "/mongo-status", access: "public" }];
   }
 }

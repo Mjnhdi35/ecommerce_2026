@@ -1,4 +1,4 @@
-import { BaseRoutes } from "../../shared/routes/base.routes";
+import { BaseRoutes, RouteDefinition } from "../../shared/routes/base.routes";
 import { AuthMiddleware } from "../auth/auth.middleware";
 import { UserController } from "./user.controller";
 
@@ -49,5 +49,16 @@ export class UserRoutes extends BaseRoutes {
       "/users/:id",
       this.handle(this.userController, this.userController.deleteUser),
     );
+  }
+
+  public getRoutes(): RouteDefinition[] {
+    return [
+      { method: "GET", path: "/users", access: "admin" },
+      { method: "GET", path: "/users/:id", access: "admin" },
+      { method: "POST", path: "/users", access: "admin" },
+      { method: "PUT", path: "/users/:id", access: "admin" },
+      { method: "PATCH", path: "/users/:id/role", access: "admin" },
+      { method: "DELETE", path: "/users/:id", access: "admin" },
+    ];
   }
 }

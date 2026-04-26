@@ -91,6 +91,11 @@ export class MongoConnection {
       this.logger.info('Created initial "refresh_tokens" collection');
     }
 
+    if (!collectionNames.has("products")) {
+      await db.createCollection("products");
+      this.logger.info('Created initial "products" collection');
+    }
+
     await db.collection("users").updateMany(
       { role: { $exists: false } },
       { $set: { role: "user", updatedAt: new Date() } },
@@ -115,6 +120,10 @@ export class MongoConnection {
       .collection("refresh_tokens")
       .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
     await db.collection("users").createIndex({ role: 1 });
+    await db.collection("products").createIndex({ slug: 1 }, { unique: true });
+    await db.collection("products").createIndex({ name: 1 });
+    await db.collection("products").createIndex({ category: 1 });
+    await db.collection("products").createIndex({ status: 1 });
   }
 
   private async connectWithRetry(

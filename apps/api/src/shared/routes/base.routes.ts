@@ -1,5 +1,11 @@
 import { NextFunction, Request, Response, Router } from "express";
 
+export interface RouteDefinition {
+  method: string;
+  path: string;
+  access?: "admin" | "authenticated" | "public";
+}
+
 interface ErrorAwareController {
   handleError?: (error: unknown, res: Response) => void;
 }
@@ -42,5 +48,9 @@ export abstract class BaseRoutes {
 
   public getRouter(): Router {
     return this.router;
+  }
+
+  public getRoutes(): RouteDefinition[] {
+    return [];
   }
 }

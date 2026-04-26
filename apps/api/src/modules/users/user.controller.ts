@@ -2,20 +2,8 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { HttpError } from "../../shared/errors/http-error";
 import { ApiResponse } from "../../shared/http/response";
-import { USER_ROLES } from "./user.model";
+import { createUserDto, updateUserDto, updateUserRoleDto } from "./user.dto";
 import { UserService } from "./user.service";
-
-const createUserSchema = z.object({
-  username: z.string().trim().min(1),
-  email: z.email().trim(),
-  password: z.string().min(6),
-  role: z.enum(USER_ROLES).optional(),
-});
-
-const updateUserSchema = createUserSchema.partial().refine(
-  (data) => Object.keys(data).length > 0,
-  { message: "At least one field is required" },
-);
 
 export class UserController {
   private userService: UserService;
@@ -31,7 +19,7 @@ export class UserController {
   };
 
   public updateUserRole = async (req: Request, res: Response): Promise<void> => {
-    const payload = z.object({ role: z.enum(USER_ROLES) }).parse(req.body);
+    const payload = updateUserRoleDto.parse(req.body);
     const user = await this.userService.update(this.getIdParam(req), {
       role: payload.role,
     });
@@ -46,14 +34,14 @@ export class UserController {
   };
 
   public createUser = async (req: Request, res: Response): Promise<void> => {
-    const payload = createUserSchema.parse(req.body);
+    const payload = createUserDto.parse(req.body);
     const user = await this.userService.create(payload);
 
     ApiResponse.success(res, user, 201);
   };
 
   public updateUser = async (req: Request, res: Response): Promise<void> => {
-    const payload = updateUserSchema.parse(req.body);
+    const payload = updateUserDto.parse(req.body);
     const user = await this.userService.update(this.getIdParam(req), payload);
 
     ApiResponse.success(res, user);

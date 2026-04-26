@@ -15,6 +15,7 @@ export class App {
   private logger: Logger;
   private notFoundMiddleware: NotFoundMiddleware;
   private requestMiddleware: RequestMiddleware;
+  private routeLogger: Logger;
 
   constructor({
     apiRoutes,
@@ -35,6 +36,7 @@ export class App {
     this.logger = loggerFactory.create("App");
     this.notFoundMiddleware = notFoundMiddleware;
     this.requestMiddleware = requestMiddleware;
+    this.routeLogger = loggerFactory.create("Route");
     this.port = parseInt(process.env.PORT || "3000", 10);
     this.setupMiddleware();
     this.setupRoutes();
@@ -75,6 +77,19 @@ export class App {
     this.app.listen(this.port, () => {
       this.logger.info(
         `Express API server started on http://localhost:${this.port} (${process.env.NODE_ENV || "development"})`,
+      );
+      this.logRegisteredRoutes();
+    });
+  }
+
+  private logRegisteredRoutes(): void {
+    const routes = this.apiRoutes.getRoutes();
+
+    this.logger.info(`Registered ${routes.length} routes`);
+
+    routes.forEach((route) => {
+      this.routeLogger.info(
+        `${route.method} ${route.path} [${route.access || "public"}]`,
       );
     });
   }

@@ -1,4 +1,4 @@
-import { BaseRoutes } from "../../shared/routes/base.routes";
+import { BaseRoutes, RouteDefinition } from "../../shared/routes/base.routes";
 import { AuthController } from "./auth.controller";
 import { AuthMiddleware } from "./auth.middleware";
 
@@ -51,5 +51,17 @@ export class AuthRoutes extends BaseRoutes {
       this.authMiddleware.authenticate,
       this.handle(this.authController, this.authController.changePassword),
     );
+  }
+
+  public getRoutes(): RouteDefinition[] {
+    return [
+      { method: "POST", path: "/auth/register", access: "public" },
+      { method: "POST", path: "/auth/login", access: "public" },
+      { method: "POST", path: "/auth/refresh", access: "public" },
+      { method: "POST", path: "/auth/logout", access: "public" },
+      { method: "GET", path: "/auth/me", access: "authenticated" },
+      { method: "PATCH", path: "/auth/me", access: "authenticated" },
+      { method: "PATCH", path: "/auth/password", access: "authenticated" },
+    ];
   }
 }
