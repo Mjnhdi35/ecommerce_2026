@@ -7,7 +7,7 @@
   "scripts": {
     "tsc": "tsc --noEmit",
     "build": "tsc",
-    "dev": "nodemon --watch src --ext ts --exec \"ts-node src/server.ts\"",
+    "dev": "nodemon",
     "start": "node dist/server.js",
     "clean": "rimraf dist",
     "lint": "eslint src --ext .ts --fix"

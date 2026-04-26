@@ -37,8 +37,6 @@ const parsedEnvironment = environmentSchema.parse({
   JWT_REFRESH_EXPIRES_IN: env.JWT_REFRESH_EXPIRES_IN,
 });
 
-const environment = environmentSchema.parse(process.env);
-
 export type Environment = z.infer<typeof environmentSchema>;
 export { parsedEnvironment as environment };
 

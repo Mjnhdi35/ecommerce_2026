@@ -1,8 +1,8 @@
 {
   "watch": ["src"],
   "ext": "ts",
-  "ignore": ["node_modules"],
-  "exec": "npm run build && node dist/server.js",
+  "ignore": ["node_modules", "dist"],
+  "exec": "ts-node src/server.ts",
   "env": {
     "NODE_ENV": "development"
   }

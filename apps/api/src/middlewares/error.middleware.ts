@@ -1,12 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
+import { Logger } from '../services/logger.service';
+
+const logger = new Logger('ErrorMiddleware');
 
 export const errorHandler = (
   error: Error,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction,
 ) => {
-  console.error(error.stack);
+  logger.error(error.message, error.stack);
 
   res.status(500).json({
     status: "ERROR",

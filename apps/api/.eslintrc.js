@@ -10,12 +10,28 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: 'module',
+    project: './tsconfig.json',
+    tsconfigRootDir: __dirname,
   },
   plugins: ['@typescript-eslint'],
   rules: {
     'no-unused-vars': 'off',
-    '@typescript-eslint/no-unused-vars': 'error',
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+      },
+    ],
     'no-console': 'warn',
   },
-  ignorePatterns: ['dist/', 'node_modules/'],
+  overrides: [
+    {
+      files: ['src/services/logger.service.ts'],
+      rules: {
+        'no-console': 'off',
+      },
+    },
+  ],
+  ignorePatterns: ['.eslintrc.js', 'dist/', 'node_modules/'],
 };
