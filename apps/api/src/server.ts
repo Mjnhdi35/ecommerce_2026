@@ -1,3 +1,4 @@
+import "./config/loadEnv";
 import { App } from "./app";
 import { connectToDatabase, disconnectFromDatabase } from "./database/connection";
 import { Logger } from "./services/logger.service";

@@ -1,5 +1,4 @@
 import express, { Express } from "express";
-import dotenv from "dotenv";
 import apiRoutes from "./routes";
 import { errorHandler } from "./middlewares/error.middleware";
 import { notFound } from "./middlewares/notFound.middleware";
@@ -14,13 +13,8 @@ export class App {
   constructor() {
     this.app = express();
     this.port = parseInt(process.env.PORT || "3000", 10);
-    this.setupEnvironment();
     this.setupMiddleware();
     this.setupRoutes();
-  }
-
-  private setupEnvironment(): void {
-    dotenv.config();
   }
 
   private setupMiddleware(): void {

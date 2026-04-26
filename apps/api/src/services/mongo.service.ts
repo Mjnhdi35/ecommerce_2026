@@ -1,5 +1,6 @@
 import { Db, Collection, InsertOneResult, UpdateResult, DeleteResult, Filter, WithId, Document, OptionalUnlessRequiredId } from 'mongodb';
 import { getDatabase, pingDatabase } from '../database/connection';
+import { environment } from '../config/environment';
 import { Logger } from './logger.service';
 
 const logger = new Logger('MongoDB');
@@ -19,7 +20,6 @@ export class MongoService {
   public async getMongoStatus() {
     try {
       const isHealthy = await pingDatabase();
-      const dbName = process.env.DB_NAME || 'ecommerce';
 
       if (!isHealthy) {
         throw new Error('MongoDB health check failed');
@@ -28,13 +28,13 @@ export class MongoService {
       const stats = await this.db.stats();
       const collections = await this.db.listCollections().toArray();
 
-      logger.info(`Connected to database: ${dbName}`);
+      logger.info(`Connected to database: ${environment.DB_NAME}`);
 
       return {
         status: "OK",
         message: "MongoDB connected successfully",
-        database: dbName,
-        env: process.env.NODE_ENV || "No Environment",
+        database: environment.DB_NAME,
+        env: environment.NODE_ENV,
         stats: {
           collections: collections.length,
           dataSize: stats.dataSize,
@@ -54,7 +54,6 @@ export class MongoService {
     }
   }
 
-  // Generic CRUD operations
   async insertOne<T extends Document>(collectionName: string, document: OptionalUnlessRequiredId<T>): Promise<InsertOneResult> {
     try {
       const collection: Collection<T> = this.db.collection<T>(collectionName);
@@ -133,7 +132,6 @@ export class MongoService {
     }
   }
 
-  // Transaction support
   async withTransaction<T>(callback: (session: any) => Promise<T>): Promise<T> {
     const session = this.db.client.startSession();
 
@@ -155,7 +153,6 @@ export class MongoService {
   private throwMongoError(error: any, operation: string): never {
     const mongoError = error as MongoError;
 
-    // Handle specific MongoDB error codes
     if (mongoError.code === 11000) {
       throw new Error(`Duplicate key error in ${operation}`);
     }

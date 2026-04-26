@@ -18,7 +18,8 @@
   "dependencies": {
     "awilix": "^13.0.3",
     "express": "^5.2.1",
-    "mongodb": "^7.2.0"
+    "mongodb": "^7.2.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

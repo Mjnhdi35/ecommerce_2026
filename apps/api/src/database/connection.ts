@@ -5,7 +5,7 @@ const logger = new Logger("Database");
 
 interface MongoConfig {
   url: string;
-  dbName: string;
+  dbName: string | undefined;
   options?: MongoClientOptions;
 }
 
@@ -17,9 +17,14 @@ class MongoConnection {
   private config: MongoConfig;
 
   private constructor() {
+    const mongoUrl = process.env.MONGO_URL;
+    if (!mongoUrl) {
+      throw new Error("MONGO_URL is required");
+    }
+
     this.config = {
-      url: process.env.MONGO_URL!,
-      dbName: process.env.DB_NAME || "ecommerce",
+      url: mongoUrl,
+      dbName: process.env.DB_NAME || undefined,
       options: {
         serverApi: {
           version: ServerApiVersion.v1,
@@ -51,25 +56,37 @@ class MongoConnection {
     }
 
     try {
-      logger.info(`Connecting to MongoDB: ${this.config.dbName}`);
-
+      logger.info(
+        `Connecting to MongoDB${this.config.dbName ? `: ${this.config.dbName}` : ""}`,
+      );
       this.client = new MongoClient(this.config.url, this.config.options);
 
       await this.connectWithRetry();
 
       this.db = this.client.db(this.config.dbName);
+      await this.ensureInitialCollections(this.db);
       this.isConnected = true;
 
       await this.db.admin().ping();
       logger.info(
-        `Successfully connected to MongoDB database: ${this.config.dbName}`,
+        `Successfully connected to MongoDB${this.config.dbName ? ` database: ${this.config.dbName}` : ""}`,
       );
 
       return this.db;
     } catch (error) {
       logger.error("Failed to connect to MongoDB", error);
+
       await this.disconnect();
       throw error;
+    }
+  }
+
+  private async ensureInitialCollections(db: Db): Promise<void> {
+    const collections = await db.listCollections({ name: "users" }).toArray();
+
+    if (collections.length === 0) {
+      await db.createCollection("users");
+      logger.info('Created initial "users" collection');
     }
   }
 
