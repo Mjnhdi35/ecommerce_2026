@@ -1,9 +1,7 @@
 import { Db, Collection, InsertOneResult, UpdateResult, DeleteResult, Filter, WithId, Document, OptionalUnlessRequiredId } from 'mongodb';
 import { environment } from '../../config/environment';
-import { pingDatabase } from '../../database/connection';
-import { Logger } from '../../shared/logger/logger.service';
-
-const logger = new Logger('MongoDB');
+import { MongoConnection } from '../../database/connection';
+import { Logger, LoggerFactory } from '../../shared/logger/logger.service';
 
 export interface MongoError extends Error {
   code?: number;
@@ -12,14 +10,26 @@ export interface MongoError extends Error {
 
 export class MongoService {
   private db: Db;
+  private logger: Logger;
+  private mongoConnection: MongoConnection;
 
-  constructor({ db }: { db: Db }) {
+  constructor({
+    db,
+    loggerFactory,
+    mongoConnection,
+  }: {
+    db: Db;
+    loggerFactory: LoggerFactory;
+    mongoConnection: MongoConnection;
+  }) {
     this.db = db;
+    this.logger = loggerFactory.create("MongoDB");
+    this.mongoConnection = mongoConnection;
   }
 
   public async getMongoStatus() {
     try {
-      const isHealthy = await pingDatabase();
+      const isHealthy = await this.mongoConnection.ping();
 
       if (!isHealthy) {
         throw new Error('MongoDB health check failed');
@@ -28,7 +38,7 @@ export class MongoService {
       const stats = await this.db.stats();
       const collections = await this.db.listCollections().toArray();
 
-      logger.info(`Connected to database: ${environment.DB_NAME}`);
+      this.logger.info(`Connected to database: ${environment.DB_NAME}`);
 
       return {
         database: environment.DB_NAME,
@@ -42,7 +52,7 @@ export class MongoService {
         }
       };
     } catch (error) {
-      logger.error("MongoDB connection failed", error);
+      this.logger.error("MongoDB connection failed", error);
       throw error;
     }
   }
@@ -52,10 +62,10 @@ export class MongoService {
       const collection: Collection<T> = this.db.collection<T>(collectionName);
       const result = await collection.insertOne(document);
 
-      logger.debug(`Inserted document into ${collectionName}`, { insertedId: result.insertedId });
+      this.logger.debug(`Inserted document into ${collectionName}`, { insertedId: result.insertedId });
       return result;
     } catch (error) {
-      logger.error(`Failed to insert document into ${collectionName}`, error);
+      this.logger.error(`Failed to insert document into ${collectionName}`, error);
       this.throwMongoError(error, `Insert failed for ${collectionName}`);
     }
   }
@@ -65,10 +75,10 @@ export class MongoService {
       const collection: Collection<T> = this.db.collection<T>(collectionName);
       const results = await collection.find(filter).toArray();
 
-      logger.debug(`Found ${results.length} documents in ${collectionName}`);
+      this.logger.debug(`Found ${results.length} documents in ${collectionName}`);
       return results;
     } catch (error) {
-      logger.error(`Failed to find documents in ${collectionName}`, error);
+      this.logger.error(`Failed to find documents in ${collectionName}`, error);
       this.throwMongoError(error, `Find failed for ${collectionName}`);
     }
   }
@@ -78,10 +88,10 @@ export class MongoService {
       const collection: Collection<T> = this.db.collection<T>(collectionName);
       const result = await collection.findOne(filter);
 
-      logger.debug(`Found document in ${collectionName}`, { found: !!result });
+      this.logger.debug(`Found document in ${collectionName}`, { found: !!result });
       return result;
     } catch (error) {
-      logger.error(`Failed to find document in ${collectionName}`, error);
+      this.logger.error(`Failed to find document in ${collectionName}`, error);
       this.throwMongoError(error, `FindOne failed for ${collectionName}`);
     }
   }
@@ -91,10 +101,10 @@ export class MongoService {
       const collection: Collection<T> = this.db.collection<T>(collectionName);
       const result = await collection.updateOne(filter, { $set: update });
 
-      logger.debug(`Updated document in ${collectionName}`, { modifiedCount: result.modifiedCount });
+      this.logger.debug(`Updated document in ${collectionName}`, { modifiedCount: result.modifiedCount });
       return result;
     } catch (error) {
-      logger.error(`Failed to update document in ${collectionName}`, error);
+      this.logger.error(`Failed to update document in ${collectionName}`, error);
       this.throwMongoError(error, `Update failed for ${collectionName}`);
     }
   }
@@ -104,10 +114,10 @@ export class MongoService {
       const collection: Collection<T> = this.db.collection<T>(collectionName);
       const result = await collection.deleteOne(filter);
 
-      logger.debug(`Deleted document from ${collectionName}`, { deletedCount: result.deletedCount });
+      this.logger.debug(`Deleted document from ${collectionName}`, { deletedCount: result.deletedCount });
       return result;
     } catch (error) {
-      logger.error(`Failed to delete document from ${collectionName}`, error);
+      this.logger.error(`Failed to delete document from ${collectionName}`, error);
       this.throwMongoError(error, `Delete failed for ${collectionName}`);
     }
   }
@@ -117,10 +127,10 @@ export class MongoService {
       const collection: Collection<T> = this.db.collection<T>(collectionName);
       const count = await collection.countDocuments(filter);
 
-      logger.debug(`Counted ${count} documents in ${collectionName}`);
+      this.logger.debug(`Counted ${count} documents in ${collectionName}`);
       return count;
     } catch (error) {
-      logger.error(`Failed to count documents in ${collectionName}`, error);
+      this.logger.error(`Failed to count documents in ${collectionName}`, error);
       this.throwMongoError(error, `Count failed for ${collectionName}`);
     }
   }
@@ -129,14 +139,14 @@ export class MongoService {
     const session = this.db.client.startSession();
 
     try {
-      logger.debug('Starting MongoDB transaction');
+      this.logger.debug('Starting MongoDB transaction');
 
       const result = await session.withTransaction(callback);
-      logger.debug('MongoDB transaction completed successfully');
+      this.logger.debug('MongoDB transaction completed successfully');
 
       return result;
     } catch (error) {
-      logger.error('MongoDB transaction failed', error);
+      this.logger.error('MongoDB transaction failed', error);
       this.throwMongoError(error, 'Transaction failed');
     } finally {
       await session.endSession();

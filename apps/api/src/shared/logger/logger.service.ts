@@ -57,3 +57,9 @@ export class Logger {
     this.logger[level]({ data }, message);
   }
 }
+
+export class LoggerFactory {
+  public create(context: string): Logger {
+    return new Logger(context);
+  }
+}

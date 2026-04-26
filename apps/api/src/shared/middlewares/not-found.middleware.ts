@@ -1,8 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { ApiResponse } from '../http/response';
 
-export const notFound = (req: Request, res: Response, _next: NextFunction) => {
-  ApiResponse.error(res, "Route not found", 404, {
-    path: req.originalUrl,
-  });
-};
+export class NotFoundMiddleware {
+  public handle = (req: Request, res: Response, _next: NextFunction): void => {
+    ApiResponse.error(res, "Route not found", 404, {
+      path: req.originalUrl,
+    });
+  };
+}

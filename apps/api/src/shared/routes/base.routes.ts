@@ -19,6 +19,11 @@ export abstract class BaseRoutes {
       try {
         await action(req, res, next);
       } catch (error) {
+        if (res.headersSent) {
+          next(error);
+          return;
+        }
+
         const errorAwareController = controller as ErrorAwareController;
 
         if (!errorAwareController.handleError) {

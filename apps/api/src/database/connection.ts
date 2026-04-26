@@ -5,9 +5,7 @@ import {
   MongoServerError,
   ServerApiVersion,
 } from "mongodb";
-import { Logger } from "../shared/logger/logger.service";
-
-const logger = new Logger("Database");
+import { Logger, LoggerFactory } from "../shared/logger/logger.service";
 
 interface MongoConfig {
   url: string;
@@ -15,14 +13,15 @@ interface MongoConfig {
   options?: MongoClientOptions;
 }
 
-class MongoConnection {
-  private static instance: MongoConnection;
+export class MongoConnection {
   private client: MongoClient | null = null;
   private db: Db | null = null;
   private isConnected = false;
   private config: MongoConfig;
+  private logger: Logger;
 
-  private constructor() {
+  constructor({ loggerFactory }: { loggerFactory: LoggerFactory }) {
+    this.logger = loggerFactory.create("Database");
     const mongoUrl = process.env.MONGO_URL;
     if (!mongoUrl) {
       throw new Error("MONGO_URL is required");
@@ -49,19 +48,13 @@ class MongoConnection {
     };
   }
 
-  static getInstance(): MongoConnection {
-    if (!MongoConnection.instance) {
-      MongoConnection.instance = new MongoConnection();
-    }
-    return MongoConnection.instance;
-  }
-
   async connect(): Promise<Db> {
     if (this.isConnected && this.db) {
       return this.db;
     }
 
     try {
+      const startedAt = Date.now();
       this.client = new MongoClient(this.config.url, this.config.options);
 
       await this.connectWithRetry();
@@ -71,13 +64,13 @@ class MongoConnection {
       this.isConnected = true;
 
       await this.db.admin().ping();
-      logger.info(
-        `Successfully connected to MongoDB${this.config.dbName ? ` database: ${this.config.dbName}` : ""}`,
+      this.logger.info(
+        `Successfully connected to MongoDB${this.config.dbName ? ` database: ${this.config.dbName}` : ""} in ${Date.now() - startedAt}ms`,
       );
 
       return this.db;
     } catch (error) {
-      logger.error("Failed to connect to MongoDB", error);
+      this.logger.error("Failed to connect to MongoDB", error);
 
       await this.disconnect();
       throw error;
@@ -90,19 +83,19 @@ class MongoConnection {
 
     if (!collectionNames.has("users")) {
       await db.createCollection("users");
-      logger.info('Created initial "users" collection');
+      this.logger.info('Created initial "users" collection');
     }
 
     if (!collectionNames.has("refresh_tokens")) {
       await db.createCollection("refresh_tokens");
-      logger.info('Created initial "refresh_tokens" collection');
+      this.logger.info('Created initial "refresh_tokens" collection');
     }
 
     try {
       await db.collection("users").createIndex({ email: 1 }, { unique: true });
     } catch (error) {
       if (error instanceof MongoServerError && error.code === 11000) {
-        logger.warn(
+        this.logger.warn(
           'Skipped unique "users.email" index because duplicate emails already exist',
         );
       } else {
@@ -134,7 +127,7 @@ class MongoConnection {
         return;
       } catch (error) {
         attempt++;
-        logger.warn(`Connection attempt ${attempt} failed`, error);
+        this.logger.warn(`Connection attempt ${attempt} failed`, error);
 
         if (attempt === maxRetries) {
           throw error;
@@ -152,10 +145,10 @@ class MongoConnection {
         this.client = null;
         this.db = null;
         this.isConnected = false;
-        logger.info("Disconnected from MongoDB");
+        this.logger.info("Disconnected from MongoDB");
       }
     } catch (error) {
-      logger.error("Error disconnecting from MongoDB", error);
+      this.logger.error("Error disconnecting from MongoDB", error);
       throw error;
     }
   }
@@ -180,15 +173,8 @@ class MongoConnection {
       await this.db.admin().ping();
       return true;
     } catch (error) {
-      logger.error("MongoDB health check failed", error);
+      this.logger.error("MongoDB health check failed", error);
       return false;
     }
   }
 }
-
-export const mongoConnection = MongoConnection.getInstance();
-export const connectToDatabase = () => mongoConnection.connect();
-export const disconnectFromDatabase = () => mongoConnection.disconnect();
-export const getDatabase = () => mongoConnection.getDb();
-export const isDatabaseConnected = () => mongoConnection.isHealthy();
-export const pingDatabase = () => mongoConnection.ping();

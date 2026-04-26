@@ -7,6 +7,12 @@ const environmentSchema = z.object({
 
   PORT: z.coerce.number().min(1).max(65535).default(3000),
 
+  BODY_LIMIT: z.string().min(1).default("100kb"),
+
+  SLOW_REQUEST_MS: z.coerce.number().min(1).default(500),
+
+  REQUEST_TIMEOUT_MS: z.coerce.number().min(1).default(10000),
+
   MONGO_URL: z
     .string()
     .url({
@@ -29,6 +35,9 @@ const env = process.env;
 const parsedEnvironment = environmentSchema.parse({
   NODE_ENV: env.NODE_ENV,
   PORT: env.PORT,
+  BODY_LIMIT: env.BODY_LIMIT,
+  SLOW_REQUEST_MS: env.SLOW_REQUEST_MS,
+  REQUEST_TIMEOUT_MS: env.REQUEST_TIMEOUT_MS,
   MONGO_URL: env.MONGO_URL,
   DB_NAME: env.DB_NAME,
   JWT_ACCESS_SECRET: env.JWT_ACCESS_SECRET,
@@ -43,6 +52,9 @@ export { parsedEnvironment as environment };
 export const {
   NODE_ENV,
   PORT,
+  BODY_LIMIT,
+  SLOW_REQUEST_MS,
+  REQUEST_TIMEOUT_MS,
   MONGO_URL,
   DB_NAME,
   JWT_ACCESS_SECRET,

@@ -12,12 +12,20 @@ import { MongoController, MongoRoutes, MongoService } from './modules/mongo';
 import { UserController, UserRoutes, UserService } from "./modules/users";
 import { ApiRoutes } from "./routes";
 import { environment } from "./config/environment";
+import { MongoConnection } from "./database/connection";
+import { LoggerFactory } from "./shared/logger/logger.service";
+import { ErrorMiddleware } from "./shared/middlewares/error.middleware";
+import { NotFoundMiddleware } from "./shared/middlewares/not-found.middleware";
+import { RequestMiddleware } from "./shared/middlewares/request.middleware";
 
 export const container = createContainer({
   injectionMode: InjectionMode.PROXY,
 });
 
 container.register({
+  loggerFactory: asClass(LoggerFactory).singleton(),
+  mongoConnection: asClass(MongoConnection).singleton(),
+
   app: asClass(App).singleton(),
 
   apiRoutes: asClass(ApiRoutes).singleton(),
@@ -32,6 +40,9 @@ container.register({
   userController: asClass(UserController).singleton(),
 
   authMiddleware: asClass(AuthMiddleware).singleton(),
+  errorMiddleware: asClass(ErrorMiddleware).singleton(),
+  notFoundMiddleware: asClass(NotFoundMiddleware).singleton(),
+  requestMiddleware: asClass(RequestMiddleware).singleton(),
 
   authService: asClass(AuthService).singleton(),
   healthService: asClass(HealthService).singleton(),

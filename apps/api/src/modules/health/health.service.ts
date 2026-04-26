@@ -1,14 +1,26 @@
-import { pingDatabase } from '../../database/connection';
-import { Logger } from '../../shared/logger/logger.service';
-
-const logger = new Logger('Health');
+import { MongoConnection } from '../../database/connection';
+import { Logger, LoggerFactory } from '../../shared/logger/logger.service';
 
 export class HealthService {
+  private logger: Logger;
+  private mongoConnection: MongoConnection;
+
+  constructor({
+    loggerFactory,
+    mongoConnection,
+  }: {
+    loggerFactory: LoggerFactory;
+    mongoConnection: MongoConnection;
+  }) {
+    this.logger = loggerFactory.create("Health");
+    this.mongoConnection = mongoConnection;
+  }
+
   public getHealthStatus = async () => {
     try {
-      const dbConnected = await pingDatabase();
+      const dbConnected = await this.mongoConnection.ping();
 
-      logger.info('Health check performed', { databaseConnected: dbConnected });
+      this.logger.info('Health check performed', { databaseConnected: dbConnected });
 
       return {
         timestamp: new Date().toISOString(),
@@ -19,7 +31,7 @@ export class HealthService {
         memoryUsage: process.memoryUsage(),
       };
     } catch (error) {
-      logger.error('Health check failed', error);
+      this.logger.error('Health check failed', error);
 
       return {
         timestamp: new Date().toISOString(),
