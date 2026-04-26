@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { HttpError } from "../../shared/errors/http-error";
 import { ApiResponse } from "../../shared/http/response";
 import { AuthService, AuthUser } from "./auth.service";
+import { UserRole } from "../users/user.model";
 
 export interface AuthenticatedRequest extends Request {
   user?: AuthUser;
@@ -37,5 +38,25 @@ export class AuthMiddleware {
 
       ApiResponse.error(res, "Invalid access token", 401);
     }
+  };
+
+  public requireRoles = (...roles: UserRole[]) => {
+    return (
+      req: AuthenticatedRequest,
+      res: Response,
+      next: NextFunction,
+    ): void => {
+      if (!req.user) {
+        ApiResponse.error(res, "Authentication is required", 401);
+        return;
+      }
+
+      if (!roles.includes(req.user.role)) {
+        ApiResponse.error(res, "Forbidden", 403);
+        return;
+      }
+
+      next();
+    };
   };
 }

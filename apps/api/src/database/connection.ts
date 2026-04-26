@@ -91,6 +91,11 @@ export class MongoConnection {
       this.logger.info('Created initial "refresh_tokens" collection');
     }
 
+    await db.collection("users").updateMany(
+      { role: { $exists: false } },
+      { $set: { role: "user", updatedAt: new Date() } },
+    );
+
     try {
       await db.collection("users").createIndex({ email: 1 }, { unique: true });
     } catch (error) {
@@ -109,6 +114,7 @@ export class MongoConnection {
     await db
       .collection("refresh_tokens")
       .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+    await db.collection("users").createIndex({ role: 1 });
   }
 
   private async connectWithRetry(

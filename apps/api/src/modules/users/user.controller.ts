@@ -2,12 +2,14 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { HttpError } from "../../shared/errors/http-error";
 import { ApiResponse } from "../../shared/http/response";
+import { USER_ROLES } from "./user.model";
 import { UserService } from "./user.service";
 
 const createUserSchema = z.object({
   username: z.string().trim().min(1),
   email: z.email().trim(),
   password: z.string().min(6),
+  role: z.enum(USER_ROLES).optional(),
 });
 
 const updateUserSchema = createUserSchema.partial().refine(
@@ -26,6 +28,15 @@ export class UserController {
     const users = await this.userService.findAll();
 
     ApiResponse.success(res, users);
+  };
+
+  public updateUserRole = async (req: Request, res: Response): Promise<void> => {
+    const payload = z.object({ role: z.enum(USER_ROLES) }).parse(req.body);
+    const user = await this.userService.update(this.getIdParam(req), {
+      role: payload.role,
+    });
+
+    ApiResponse.success(res, user);
   };
 
   public getUserById = async (req: Request, res: Response): Promise<void> => {

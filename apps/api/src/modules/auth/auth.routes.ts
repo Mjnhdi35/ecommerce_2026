@@ -41,5 +41,15 @@ export class AuthRoutes extends BaseRoutes {
       this.authMiddleware.authenticate,
       this.handle(this.authController, this.authController.me),
     );
+    this.router.patch(
+      "/auth/me",
+      this.authMiddleware.authenticate,
+      this.handle(this.authController, this.authController.updateMe),
+    );
+    this.router.patch(
+      "/auth/password",
+      this.authMiddleware.authenticate,
+      this.handle(this.authController, this.authController.changePassword),
+    );
   }
 }

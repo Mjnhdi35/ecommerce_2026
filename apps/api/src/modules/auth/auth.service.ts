@@ -4,10 +4,11 @@ import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
 import { Collection, Db, ObjectId, WithId } from "mongodb";
 import { environment } from "../../config/environment";
 import { RefreshToken } from "./refresh-token.model";
-import { User } from "../users/user.model";
+import { User, UserRole } from "../users/user.model";
 import {
   CreateUserInput,
   PublicUser,
+  UpdateProfileInput,
   UserService,
 } from "../users/user.service";
 import { HttpError } from "../../shared/errors/http-error";
@@ -17,12 +18,14 @@ const REFRESH_TOKEN_COLLECTION = "refresh_tokens";
 interface TokenPayload extends JwtPayload {
   sub: string;
   type: "access" | "refresh";
+  role: UserRole;
   tokenId?: string;
 }
 
 export interface AuthUser {
   id: string;
   email: string;
+  role: UserRole;
 }
 
 export interface AuthTokens {
@@ -52,8 +55,12 @@ export class AuthService {
   }
 
   public async register(input: CreateUserInput): Promise<AuthResult> {
-    const user = await this.userService.create(input);
-    const tokens = await this.issueTokenPair(user._id.toHexString(), user.email);
+    const userCount = await this.userService.count();
+    const user = await this.userService.create({
+      ...input,
+      role: userCount === 0 ? "admin" : "user",
+    });
+    const tokens = await this.issueTokenPair(user);
 
     return {
       user,
@@ -74,10 +81,11 @@ export class AuthService {
       throw new HttpError(401, "Invalid email or password");
     }
 
-    const tokens = await this.issueTokenPair(user._id.toHexString(), user.email);
+    const publicUser = this.toPublicUser(user);
+    const tokens = await this.issueTokenPair(publicUser);
 
     return {
-      user: this.toPublicUser(user),
+      user: publicUser,
       ...tokens,
     };
   }
@@ -100,11 +108,30 @@ export class AuthService {
     const user = await this.userService.findById(payload.sub);
     await this.revokeRefreshToken(tokenHash);
 
-    return this.issueTokenPair(user._id.toHexString(), user.email);
+    return this.issueTokenPair(user);
   }
 
   public async logout(refreshToken: string): Promise<void> {
     await this.revokeRefreshToken(this.hashToken(refreshToken));
+  }
+
+  public async getMe(userId: string): Promise<PublicUser> {
+    return this.userService.findById(userId);
+  }
+
+  public async updateMe(
+    userId: string,
+    input: UpdateProfileInput,
+  ): Promise<PublicUser> {
+    return this.userService.updateProfile(userId, input);
+  }
+
+  public async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    await this.userService.changePassword(userId, currentPassword, newPassword);
   }
 
   public verifyAccessToken(accessToken: string): AuthUser {
@@ -120,14 +147,17 @@ export class AuthService {
     return {
       id: payload.sub,
       email: String(payload.email || ""),
+      role: payload.role,
     };
   }
 
-  private async issueTokenPair(userId: string, email: string): Promise<AuthTokens> {
+  private async issueTokenPair(user: PublicUser): Promise<AuthTokens> {
+    const userId = user._id.toHexString();
     const accessToken = this.signToken(
       {
         sub: userId,
-        email,
+        email: user.email,
+        role: user.role,
         type: "access",
       },
       environment.JWT_ACCESS_SECRET,
@@ -137,7 +167,8 @@ export class AuthService {
     const refreshToken = this.signToken(
       {
         sub: userId,
-        email,
+        email: user.email,
+        role: user.role,
         type: "refresh",
         tokenId: new ObjectId().toHexString(),
       },

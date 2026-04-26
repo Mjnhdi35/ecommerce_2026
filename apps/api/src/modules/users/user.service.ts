@@ -8,13 +8,16 @@ import {
   WithId,
 } from "mongodb";
 import { HttpError } from "../../shared/errors/http-error";
-import { User } from "./user.model";
+import { User, UserRole } from "./user.model";
 
 const COLLECTION_NAME = "users";
 const SALT_ROUNDS = 10;
 
-export type CreateUserInput = Pick<User, "username" | "email" | "password">;
-export type UpdateUserInput = Partial<CreateUserInput>;
+export type CreateUserInput = Pick<User, "username" | "email" | "password"> & {
+  role?: UserRole;
+};
+export type UpdateUserInput = Partial<Pick<User, "email" | "password" | "role" | "username">>;
+export type UpdateProfileInput = Partial<Pick<User, "email" | "username">>;
 export type PublicUser = Omit<WithId<User>, "password">;
 
 export class UserService {
@@ -29,6 +32,10 @@ export class UserService {
     return users.map(this.toPublicUser);
   }
 
+  public async count(): Promise<number> {
+    return this.collection.countDocuments();
+  }
+
   public async findById(id: string): Promise<PublicUser> {
     const user = await this.collection.findOne({ _id: this.toObjectId(id) });
 
@@ -37,6 +44,16 @@ export class UserService {
     }
 
     return this.toPublicUser(user);
+  }
+
+  public async findByIdWithPassword(id: string): Promise<WithId<User>> {
+    const user = await this.collection.findOne({ _id: this.toObjectId(id) });
+
+    if (!user) {
+      throw new HttpError(404, "User not found");
+    }
+
+    return user;
   }
 
   public async findByEmailWithPassword(email: string): Promise<WithId<User> | null> {
@@ -48,6 +65,7 @@ export class UserService {
     const document: OptionalId<User> = {
       ...input,
       password: await bcrypt.hash(input.password, SALT_ROUNDS),
+      role: input.role || "user",
       createdAt: now,
       updatedAt: now,
     };
@@ -58,6 +76,30 @@ export class UserService {
     } catch (error) {
       this.handleWriteError(error);
     }
+  }
+
+  public async updateProfile(
+    id: string,
+    input: UpdateProfileInput,
+  ): Promise<PublicUser> {
+    return this.update(id, input);
+  }
+
+  public async changePassword(
+    id: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.findByIdWithPassword(id);
+    const passwordMatches = await bcrypt.compare(currentPassword, user.password);
+
+    if (!passwordMatches) {
+      throw new HttpError(401, "Current password is incorrect");
+    }
+
+    await this.update(id, {
+      password: newPassword,
+    });
   }
 
   public async update(id: string, input: UpdateUserInput): Promise<PublicUser> {
