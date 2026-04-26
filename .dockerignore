@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+.git
+.github
+apps/api/dist
+apps/api/.env
+coverage
+*.log
+context.md
+DETAILED_FUNCTION_GUIDE.md
+PROJECT_DOCUMENTATION.md
+TECHNOLOGY_AND_BEST_PRACTICES.md

@@ -1,5 +1,6 @@
 import express, { Express } from "express";
 import cookieParser from "cookie-parser";
+import { Server } from "http";
 import { environment } from "./config/environment";
 import { ApiRoutes } from "./routes";
 import { ApiResponse } from "./shared/http/response";
@@ -80,13 +81,15 @@ export class App {
     return this.app;
   }
 
-  public start(): void {
-    this.app.listen(this.port, () => {
+  public start(): Server {
+    const server = this.app.listen(this.port, () => {
       this.logger.info(
         `Express API server started on http://localhost:${this.port}${environment.API_PREFIX} (${environment.NODE_ENV})`,
       );
       this.logRegisteredRoutes();
     });
+
+    return server;
   }
 
   private logRegisteredRoutes(): void {

@@ -1,0 +1,39 @@
+name: API CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint API
+        run: npm --workspace apps/api run lint
+
+      - name: Typecheck API
+        run: npm --workspace apps/api run tsc
+
+      - name: Test API
+        run: npm --workspace apps/api run test
+
+      - name: Build API
+        run: npm --workspace apps/api run build
+
+      - name: Build project references
+        run: npx tsc -b tsconfig.json --pretty false

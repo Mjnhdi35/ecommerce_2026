@@ -1,0 +1,37 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      API_PREFIX: /api/v1
+      AUTH_RATE_LIMIT_MAX: 20
+      AUTH_RATE_LIMIT_WINDOW_MS: 900000
+      BODY_LIMIT: 100kb
+      CLIENT_ORIGINS: http://localhost:5173,http://localhost:3000
+      CSRF_SECRET: change-me-csrf-secret-at-least-32-characters
+      DB_NAME: ecommerce
+      DEFAULT_CURRENCY: VND
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_ACCESS_SECRET: change-me-access-secret-at-least-32-characters
+      JWT_REFRESH_EXPIRES_IN: 7d
+      JWT_REFRESH_SECRET: change-me-refresh-secret-at-least-32-characters
+      MONGO_URL: mongodb://mongo:27017
+      NODE_ENV: production
+      PORT: 3000
+      REQUEST_TIMEOUT_MS: 10000
+      SLOW_REQUEST_MS: 500
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
