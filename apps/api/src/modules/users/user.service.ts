@@ -1,16 +1,9 @@
 import bcrypt from "bcrypt";
-import {
-  Collection,
-  Db,
-  MongoServerError,
-  ObjectId,
-  OptionalId,
-  WithId,
-} from "mongodb";
+import { MongoServerError, ObjectId, OptionalId, WithId } from "mongodb";
 import { HttpError } from "../../shared/errors/http-error";
 import { User, UserRole } from "./user.model";
+import { UserRepository } from "./user.repository";
 
-const COLLECTION_NAME = "users";
 const SALT_ROUNDS = 10;
 
 export type CreateUserInput = Pick<User, "username" | "email" | "password"> & {
@@ -21,27 +14,27 @@ export type UpdateProfileInput = Partial<Pick<User, "email" | "username">>;
 export type PublicUser = Omit<WithId<User>, "password">;
 
 export class UserService {
-  private collection: Collection<User>;
+  private userRepository: UserRepository;
 
-  constructor({ db }: { db: Db }) {
-    this.collection = db.collection<User>(COLLECTION_NAME);
+  constructor({ userRepository }: { userRepository: UserRepository }) {
+    this.userRepository = userRepository;
   }
 
   public async findAll(): Promise<PublicUser[]> {
-    const users = await this.collection.find().sort({ createdAt: -1 }).toArray();
+    const users = await this.userRepository.findAll();
     return users.map(this.toPublicUser);
   }
 
   public async count(): Promise<number> {
-    return this.collection.countDocuments();
+    return this.userRepository.count();
   }
 
   public async countByRole(role: UserRole): Promise<number> {
-    return this.collection.countDocuments({ role });
+    return this.userRepository.countByRole(role);
   }
 
   public async findById(id: string): Promise<PublicUser> {
-    const user = await this.collection.findOne({ _id: this.toObjectId(id) });
+    const user = await this.userRepository.findById(this.toObjectId(id));
 
     if (!user) {
       throw new HttpError(404, "User not found");
@@ -51,7 +44,7 @@ export class UserService {
   }
 
   public async findByIdWithPassword(id: string): Promise<WithId<User>> {
-    const user = await this.collection.findOne({ _id: this.toObjectId(id) });
+    const user = await this.userRepository.findById(this.toObjectId(id));
 
     if (!user) {
       throw new HttpError(404, "User not found");
@@ -61,7 +54,7 @@ export class UserService {
   }
 
   public async findByEmailWithPassword(email: string): Promise<WithId<User> | null> {
-    return this.collection.findOne({ email: this.normalizeEmail(email) });
+    return this.userRepository.findByEmail(this.normalizeEmail(email));
   }
 
   public async create(input: CreateUserInput): Promise<PublicUser> {
@@ -76,8 +69,8 @@ export class UserService {
     };
 
     try {
-      const result = await this.collection.insertOne(document);
-      return this.findById(result.insertedId.toHexString());
+      const insertedId = await this.userRepository.insert(document);
+      return this.findById(insertedId.toHexString());
     } catch (error) {
       this.handleWriteError(error);
     }
@@ -126,10 +119,7 @@ export class UserService {
     let result;
 
     try {
-      result = await this.collection.updateOne(
-        { _id: this.toObjectId(id) },
-        { $set: update },
-      );
+      result = await this.userRepository.update(this.toObjectId(id), update);
     } catch (error) {
       this.handleWriteError(error);
     }
@@ -143,7 +133,7 @@ export class UserService {
 
   public async delete(id: string): Promise<void> {
     const objectId = this.toObjectId(id);
-    const user = await this.collection.findOne({ _id: objectId });
+    const user = await this.userRepository.findById(objectId);
 
     if (!user) {
       throw new HttpError(404, "User not found");
@@ -153,7 +143,7 @@ export class UserService {
       throw new HttpError(400, "Cannot delete the last admin user");
     }
 
-    const result = await this.collection.deleteOne({ _id: objectId });
+    const result = await this.userRepository.delete(objectId);
 
     if (result.deletedCount === 0) {
       throw new HttpError(404, "User not found");
@@ -185,7 +175,7 @@ export class UserService {
       return;
     }
 
-    const user = await this.collection.findOne({ _id: this.toObjectId(id) });
+    const user = await this.userRepository.findById(this.toObjectId(id));
 
     if (!user) {
       throw new HttpError(404, "User not found");

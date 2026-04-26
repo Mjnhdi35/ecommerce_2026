@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { z } from "zod";
 import { HttpError } from "../../shared/errors/http-error";
 import { ApiResponse } from "../../shared/http/response";
 import {
@@ -62,20 +61,6 @@ export class ProductController {
     await this.productService.delete(this.getIdParam(req));
 
     ApiResponse.noContent(res);
-  };
-
-  public handleError = (error: unknown, res: Response): void => {
-    if (error instanceof z.ZodError) {
-      ApiResponse.error(res, "Invalid request", 400, error.issues);
-      return;
-    }
-
-    if (error instanceof HttpError) {
-      ApiResponse.error(res, error.message, error.statusCode);
-      return;
-    }
-
-    throw error;
   };
 
   private getIdParam(req: Request): string {

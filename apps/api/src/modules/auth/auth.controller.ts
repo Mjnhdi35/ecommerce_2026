@@ -1,5 +1,4 @@
 import { CookieOptions, Request, Response } from "express";
-import { z } from "zod";
 import { environment } from "../../config/environment";
 import { HttpError } from "../../shared/errors/http-error";
 import { ApiResponse } from "../../shared/http/response";
@@ -27,7 +26,10 @@ export class AuthController {
 
   public register = async (req: Request, res: Response): Promise<void> => {
     const payload = registerDto.parse(req.body);
-    const authResult = await this.authService.register(payload);
+    const authResult = await this.authService.register(
+      payload,
+      this.getSessionMetadata(req),
+    );
 
     this.setAuthCookies(res, authResult);
 
@@ -36,7 +38,11 @@ export class AuthController {
 
   public login = async (req: Request, res: Response): Promise<void> => {
     const payload = loginDto.parse(req.body);
-    const authResult = await this.authService.login(payload.email, payload.password);
+    const authResult = await this.authService.login(
+      payload.email,
+      payload.password,
+      this.getSessionMetadata(req),
+    );
 
     this.setAuthCookies(res, authResult);
 
@@ -45,7 +51,10 @@ export class AuthController {
 
   public refresh = async (req: Request, res: Response): Promise<void> => {
     const refreshToken = this.getRefreshToken(req);
-    const tokens = await this.authService.refresh(refreshToken);
+    const tokens = await this.authService.refresh(
+      refreshToken,
+      this.getSessionMetadata(req),
+    );
 
     this.setAuthCookies(res, tokens);
 
@@ -106,18 +115,49 @@ export class AuthController {
     ApiResponse.noContent(res);
   };
 
-  public handleError = (error: unknown, res: Response): void => {
-    if (error instanceof z.ZodError) {
-      ApiResponse.error(res, "Invalid request body", 400, error.issues);
-      return;
+  public getSessions = async (
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> => {
+    if (!req.user) {
+      throw new HttpError(401, "Authentication is required");
     }
 
-    if (error instanceof HttpError) {
-      ApiResponse.error(res, error.message, error.statusCode);
-      return;
+    const sessions = await this.authService.listSessions(req.user.id);
+    ApiResponse.success(res, sessions);
+  };
+
+  public logoutAll = async (
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> => {
+    if (!req.user) {
+      throw new HttpError(401, "Authentication is required");
     }
 
-    throw error;
+    await this.authService.logoutAll(req.user.id);
+    this.clearAuthCookies(res);
+
+    ApiResponse.noContent(res);
+  };
+
+  public revokeSession = async (
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> => {
+    if (!req.user) {
+      throw new HttpError(401, "Authentication is required");
+    }
+
+    const { id } = req.params;
+
+    if (typeof id !== "string") {
+      throw new HttpError(400, "Invalid session id");
+    }
+
+    await this.authService.revokeSession(req.user.id, id);
+
+    ApiResponse.noContent(res);
   };
 
   private getRefreshToken(req: Request, required = true): string {
@@ -169,6 +209,13 @@ export class AuthController {
       path: "/",
       sameSite: "lax",
       secure: environment.NODE_ENV === "production",
+    };
+  }
+
+  private getSessionMetadata(req: Request) {
+    return {
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
     };
   }
 }

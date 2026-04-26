@@ -97,6 +97,36 @@ export class MongoConnection {
       this.logger.info('Created initial "products" collection');
     }
 
+    if (!collectionNames.has("categories")) {
+      await db.createCollection("categories");
+      this.logger.info('Created initial "categories" collection');
+    }
+
+    if (!collectionNames.has("carts")) {
+      await db.createCollection("carts");
+      this.logger.info('Created initial "carts" collection');
+    }
+
+    if (!collectionNames.has("orders")) {
+      await db.createCollection("orders");
+      this.logger.info('Created initial "orders" collection');
+    }
+
+    if (!collectionNames.has("stock_reservations")) {
+      await db.createCollection("stock_reservations");
+      this.logger.info('Created initial "stock_reservations" collection');
+    }
+
+    if (!collectionNames.has("payments")) {
+      await db.createCollection("payments");
+      this.logger.info('Created initial "payments" collection');
+    }
+
+    if (!collectionNames.has("audit_logs")) {
+      await db.createCollection("audit_logs");
+      this.logger.info('Created initial "audit_logs" collection');
+    }
+
     await db.collection("users").updateMany(
       { role: { $exists: false } },
       { $set: { role: "user", updatedAt: new Date() } },
@@ -125,6 +155,34 @@ export class MongoConnection {
     await db.collection("products").createIndex({ name: 1 });
     await db.collection("products").createIndex({ category: 1 });
     await db.collection("products").createIndex({ status: 1 });
+    await db.collection("categories").createIndex({ slug: 1 }, { unique: true });
+    await db.collection("categories").createIndex({ name: 1 });
+    await db.collection("categories").createIndex({ parentId: 1 });
+    await db.collection("categories").createIndex({ status: 1 });
+    await db.collection("carts").createIndex({ userId: 1 }, { unique: true });
+    await db.collection("orders").createIndex({ userId: 1, createdAt: -1 });
+    await db.collection("orders").createIndex({ status: 1 });
+    await db.collection("payments").createIndex(
+      { userId: 1, idempotencyKey: 1 },
+      { unique: true },
+    );
+    await db.collection("payments").createIndex(
+      { provider: 1, providerPaymentId: 1 },
+      { unique: true },
+    );
+    await db.collection("payments").createIndex({ orderId: 1 });
+    await db.collection("payments").createIndex({ userId: 1, createdAt: -1 });
+    await db.collection("payments").createIndex({ status: 1 });
+    await db.collection("audit_logs").createIndex({ userId: 1, createdAt: -1 });
+    await db.collection("audit_logs").createIndex({ entityType: 1, entityId: 1 });
+    await db.collection("audit_logs").createIndex({ action: 1, createdAt: -1 });
+    await db.collection("stock_reservations").createIndex({ orderId: 1 });
+    await db.collection("stock_reservations").createIndex({ userId: 1 });
+    await db.collection("stock_reservations").createIndex({ productId: 1 });
+    await db.collection("stock_reservations").createIndex({ status: 1 });
+    await db
+      .collection("stock_reservations")
+      .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   }
 
   private async connectWithRetry(

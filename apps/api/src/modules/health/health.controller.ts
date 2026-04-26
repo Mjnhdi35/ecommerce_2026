@@ -19,6 +19,7 @@ export class HealthController {
         "API is running but health check failed",
         500,
         error instanceof Error ? error.message : "Unknown error",
+        "HEALTH_CHECK_FAILED",
       );
     }
   };

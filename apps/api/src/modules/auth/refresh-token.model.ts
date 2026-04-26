@@ -6,5 +6,7 @@ export interface RefreshToken {
   tokenHash: string;
   expiresAt: Date;
   createdAt: Date;
+  ipAddress?: string;
   revokedAt?: Date;
+  userAgent?: string;
 }

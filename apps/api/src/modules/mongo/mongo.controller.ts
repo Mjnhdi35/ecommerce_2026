@@ -19,6 +19,7 @@ export class MongoController {
         "MongoDB connection failed",
         500,
         error instanceof Error ? error.message : "Unknown error",
+        "MONGO_STATUS_FAILED",
       );
     }
   };

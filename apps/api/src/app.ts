@@ -6,6 +6,7 @@ import { ApiResponse } from "./shared/http/response";
 import { ErrorMiddleware } from "./shared/middlewares/error.middleware";
 import { NotFoundMiddleware } from "./shared/middlewares/not-found.middleware";
 import { RequestMiddleware } from "./shared/middlewares/request.middleware";
+import { SecurityMiddleware } from "./shared/middlewares/security.middleware";
 import { Logger, LoggerFactory } from "./shared/logger/logger.service";
 
 export class App {
@@ -17,6 +18,7 @@ export class App {
   private notFoundMiddleware: NotFoundMiddleware;
   private requestMiddleware: RequestMiddleware;
   private routeLogger: Logger;
+  private securityMiddleware: SecurityMiddleware;
 
   constructor({
     apiRoutes,
@@ -24,12 +26,14 @@ export class App {
     loggerFactory,
     notFoundMiddleware,
     requestMiddleware,
+    securityMiddleware,
   }: {
     apiRoutes: ApiRoutes;
     errorMiddleware: ErrorMiddleware;
     loggerFactory: LoggerFactory;
     notFoundMiddleware: NotFoundMiddleware;
     requestMiddleware: RequestMiddleware;
+    securityMiddleware: SecurityMiddleware;
   }) {
     this.app = express();
     this.apiRoutes = apiRoutes;
@@ -38,7 +42,8 @@ export class App {
     this.notFoundMiddleware = notFoundMiddleware;
     this.requestMiddleware = requestMiddleware;
     this.routeLogger = loggerFactory.create("Route");
-    this.port = parseInt(process.env.PORT || "3000", 10);
+    this.securityMiddleware = securityMiddleware;
+    this.port = environment.PORT;
     this.setupMiddleware();
     this.setupRoutes();
   }
@@ -46,6 +51,8 @@ export class App {
   private setupMiddleware(): void {
     this.app.disable("x-powered-by");
     this.app.use(this.requestMiddleware.handle);
+    this.app.use(this.securityMiddleware.helmet);
+    this.app.use(this.securityMiddleware.cors);
     this.app.use(cookieParser());
     this.app.use(express.json({ limit: environment.BODY_LIMIT }));
     this.app.use(
@@ -56,15 +63,13 @@ export class App {
   private setupRoutes(): void {
     this.app.get("/", (_req, res) => {
       ApiResponse.success(res, {
-        message: "Welcome to Express 5 API",
+        message: "Ecommerce API",
         version: "1.0.0",
-        endpoints: {
-          health: "/health",
-        },
+        api: environment.API_PREFIX,
       });
     });
 
-    this.app.use("/", this.apiRoutes.getRouter());
+    this.app.use(environment.API_PREFIX, this.apiRoutes.getRouter());
 
     this.app.use(this.notFoundMiddleware.handle);
 
@@ -78,14 +83,20 @@ export class App {
   public start(): void {
     this.app.listen(this.port, () => {
       this.logger.info(
-        `Express API server started on http://localhost:${this.port} (${process.env.NODE_ENV || "development"})`,
+        `Express API server started on http://localhost:${this.port}${environment.API_PREFIX} (${environment.NODE_ENV})`,
       );
       this.logRegisteredRoutes();
     });
   }
 
   private logRegisteredRoutes(): void {
-    const routes = this.apiRoutes.getRoutes();
+    const routes = [
+      { method: "GET", path: "/", access: "public" },
+      ...this.apiRoutes.getRoutes().map((route) => ({
+        ...route,
+        path: `${environment.API_PREFIX}${route.path === "/" ? "" : route.path}`,
+      })),
+    ];
 
     this.logger.info(`Registered ${routes.length} routes`);
 

@@ -1,6 +1,4 @@
 import {
-  Collection,
-  Db,
   Filter,
   MongoServerError,
   ObjectId,
@@ -9,8 +7,7 @@ import {
 } from "mongodb";
 import { HttpError } from "../../shared/errors/http-error";
 import { Product, ProductStatus } from "./product.model";
-
-const COLLECTION_NAME = "products";
+import { ProductRepository } from "./product.repository";
 
 export interface CreateProductInput {
   name: string;
@@ -42,27 +39,25 @@ export interface PaginatedProducts {
 }
 
 export class ProductService {
-  private collection: Collection<Product>;
+  private productRepository: ProductRepository;
 
-  constructor({ db }: { db: Db }) {
-    this.collection = db.collection<Product>(COLLECTION_NAME);
+  constructor({
+    productRepository,
+  }: {
+    productRepository: ProductRepository;
+  }) {
+    this.productRepository = productRepository;
   }
 
   public async findAll(query: ProductQuery = {}): Promise<PaginatedProducts> {
     const page = query.page || 1;
     const limit = query.limit || 20;
     const filter = this.buildFilter(query);
-    const skip = (page - 1) * limit;
-
-    const [items, total] = await Promise.all([
-      this.collection
-        .find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .toArray(),
-      this.collection.countDocuments(filter),
-    ]);
+    const { items, total } = await this.productRepository.findAll({
+      filter,
+      limit,
+      page,
+    });
 
     return {
       items,
@@ -74,7 +69,7 @@ export class ProductService {
   }
 
   public async findById(id: string): Promise<WithId<Product>> {
-    const product = await this.collection.findOne({ _id: this.toObjectId(id) });
+    const product = await this.productRepository.findById(this.toObjectId(id));
 
     if (!product) {
       throw new HttpError(404, "Product not found");
@@ -84,7 +79,7 @@ export class ProductService {
   }
 
   public async findBySlug(slug: string): Promise<WithId<Product>> {
-    const product = await this.collection.findOne({ slug });
+    const product = await this.productRepository.findBySlug(slug);
 
     if (!product) {
       throw new HttpError(404, "Product not found");
@@ -105,8 +100,8 @@ export class ProductService {
     };
 
     try {
-      const result = await this.collection.insertOne(document);
-      return this.findById(result.insertedId.toHexString());
+      const insertedId = await this.productRepository.insert(document);
+      return this.findById(insertedId.toHexString());
     } catch (error) {
       this.handleWriteError(error);
     }
@@ -126,9 +121,9 @@ export class ProductService {
     }
 
     try {
-      const result = await this.collection.updateOne(
-        { _id: this.toObjectId(id) },
-        { $set: update },
+      const result = await this.productRepository.update(
+        this.toObjectId(id),
+        update,
       );
 
       if (result.matchedCount === 0) {
@@ -142,7 +137,7 @@ export class ProductService {
   }
 
   public async delete(id: string): Promise<void> {
-    const result = await this.collection.deleteOne({ _id: this.toObjectId(id) });
+    const result = await this.productRepository.delete(this.toObjectId(id));
 
     if (result.deletedCount === 0) {
       throw new HttpError(404, "Product not found");

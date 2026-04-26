@@ -44,11 +44,23 @@ export class AuthMiddleware {
       next();
     } catch (error) {
       if (error instanceof HttpError) {
-        ApiResponse.error(res, error.message, error.statusCode);
+        ApiResponse.error(
+          res,
+          error.message,
+          error.statusCode,
+          undefined,
+          error.errorCode,
+        );
         return;
       }
 
-      ApiResponse.error(res, "Invalid access token", 401);
+      ApiResponse.error(
+        res,
+        "Invalid access token",
+        401,
+        undefined,
+        "AUTH_INVALID_ACCESS_TOKEN",
+      );
     }
   };
 
@@ -59,12 +71,18 @@ export class AuthMiddleware {
       next: NextFunction,
     ): void => {
       if (!req.user) {
-        ApiResponse.error(res, "Authentication is required", 401);
+        ApiResponse.error(
+          res,
+          "Authentication is required",
+          401,
+          undefined,
+          "AUTH_REQUIRED",
+        );
         return;
       }
 
       if (!roles.includes(req.user.role)) {
-        ApiResponse.error(res, "Forbidden", 403);
+        ApiResponse.error(res, "Forbidden", 403, undefined, "FORBIDDEN");
         return;
       }
 

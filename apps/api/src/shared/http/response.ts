@@ -9,6 +9,8 @@ interface SuccessResponse<T> {
 interface ErrorResponse {
   success: false;
   message: string;
+  errorCode: string;
+  requestId?: string;
   errors?: unknown;
 }
 
@@ -43,15 +45,22 @@ export class ApiResponse {
     message: string,
     statusCode = 500,
     errors?: unknown,
+    errorCode?: string,
   ): void {
     if (res.headersSent) {
       return;
     }
 
     const body: ErrorResponse = {
+      errorCode: errorCode || this.getDefaultErrorCode(statusCode),
       success: false,
       message,
     };
+    const requestId = res.locals.requestId as string | undefined;
+
+    if (requestId) {
+      body.requestId = requestId;
+    }
 
     if (errors !== undefined) {
       body.errors = errors;
@@ -66,5 +75,9 @@ export class ApiResponse {
     }
 
     res.status(204).send();
+  }
+
+  private static getDefaultErrorCode(statusCode: number): string {
+    return `HTTP_${statusCode}`;
   }
 }

@@ -1,9 +1,8 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
-import { Collection, Db, MongoServerError, ObjectId, WithId } from "mongodb";
+import { ObjectId, WithId } from "mongodb";
 import { environment } from "../../config/environment";
-import { RefreshToken } from "./refresh-token.model";
 import { User, UserRole } from "../users/user.model";
 import {
   CreateUserInput,
@@ -12,15 +11,8 @@ import {
   UserService,
 } from "../users/user.service";
 import { HttpError } from "../../shared/errors/http-error";
-
-const REFRESH_TOKEN_COLLECTION = "refresh_tokens";
-const BOOTSTRAP_LOCK_COLLECTION = "bootstrap_locks";
-const FIRST_ADMIN_LOCK_ID = "first-admin";
-
-interface BootstrapLock {
-  _id: string;
-  createdAt: Date;
-}
+import { BootstrapLockRepository } from "./bootstrap-lock.repository";
+import { RefreshTokenRepository } from "./refresh-token.repository";
 
 interface TokenPayload extends JwtPayload {
   sub: string;
@@ -44,28 +36,42 @@ export interface AuthResult extends AuthTokens {
   user: PublicUser;
 }
 
+export interface AuthSessionMetadata {
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+export interface AuthSession {
+  id: string;
+  createdAt: Date;
+  expiresAt: Date;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
 export class AuthService {
-  private bootstrapLocks: Collection<BootstrapLock>;
-  private refreshTokens: Collection<RefreshToken>;
+  private bootstrapLockRepository: BootstrapLockRepository;
+  private refreshTokenRepository: RefreshTokenRepository;
   private userService: UserService;
 
   constructor({
-    db,
+    bootstrapLockRepository,
+    refreshTokenRepository,
     userService,
   }: {
-    db: Db;
+    bootstrapLockRepository: BootstrapLockRepository;
+    refreshTokenRepository: RefreshTokenRepository;
     userService: UserService;
   }) {
-    this.bootstrapLocks = db.collection<BootstrapLock>(
-      BOOTSTRAP_LOCK_COLLECTION,
-    );
-    this.refreshTokens = db.collection<RefreshToken>(
-      REFRESH_TOKEN_COLLECTION,
-    );
+    this.bootstrapLockRepository = bootstrapLockRepository;
+    this.refreshTokenRepository = refreshTokenRepository;
     this.userService = userService;
   }
 
-  public async register(input: CreateUserInput): Promise<AuthResult> {
+  public async register(
+    input: CreateUserInput,
+    metadata: AuthSessionMetadata = {},
+  ): Promise<AuthResult> {
     let user = await this.userService.create({
       ...input,
       role: "user",
@@ -77,7 +83,7 @@ export class AuthService {
       });
     }
 
-    const tokens = await this.issueTokenPair(user);
+    const tokens = await this.issueTokenPair(user, metadata);
 
     return {
       user,
@@ -85,7 +91,11 @@ export class AuthService {
     };
   }
 
-  public async login(email: string, password: string): Promise<AuthResult> {
+  public async login(
+    email: string,
+    password: string,
+    metadata: AuthSessionMetadata = {},
+  ): Promise<AuthResult> {
     const user = await this.userService.findByEmailWithPassword(email);
 
     if (!user) {
@@ -99,7 +109,7 @@ export class AuthService {
     }
 
     const publicUser = this.toPublicUser(user);
-    const tokens = await this.issueTokenPair(publicUser);
+    const tokens = await this.issueTokenPair(publicUser, metadata);
 
     return {
       user: publicUser,
@@ -107,24 +117,17 @@ export class AuthService {
     };
   }
 
-  public async refresh(refreshToken: string): Promise<AuthTokens> {
+  public async refresh(
+    refreshToken: string,
+    metadata: AuthSessionMetadata = {},
+  ): Promise<AuthTokens> {
     const payload = this.verifyRefreshToken(refreshToken);
     const tokenHash = this.hashToken(refreshToken);
 
-    const storedToken = await this.refreshTokens.findOneAndUpdate(
-      {
-        tokenHash,
-        userId: new ObjectId(payload.sub),
-        revokedAt: { $exists: false },
-        expiresAt: { $gt: new Date() },
-      },
-      {
-        $set: {
-          revokedAt: new Date(),
-        },
-      },
-      { returnDocument: "before" },
-    );
+    const storedToken = await this.refreshTokenRepository.rotateValidToken({
+      tokenHash,
+      userId: new ObjectId(payload.sub),
+    });
 
     if (!storedToken) {
       throw new HttpError(401, "Invalid refresh token");
@@ -132,7 +135,10 @@ export class AuthService {
 
     const user = await this.userService.findById(payload.sub);
 
-    return this.issueTokenPair(user);
+    return this.issueTokenPair(user, {
+      ipAddress: metadata.ipAddress || storedToken.ipAddress,
+      userAgent: metadata.userAgent || storedToken.userAgent,
+    });
   }
 
   public async logout(refreshToken: string): Promise<void> {
@@ -157,6 +163,35 @@ export class AuthService {
   ): Promise<void> {
     await this.userService.changePassword(userId, currentPassword, newPassword);
     await this.revokeRefreshTokensByUserId(userId);
+  }
+
+  public async listSessions(userId: string): Promise<AuthSession[]> {
+    const sessions = await this.refreshTokenRepository.findActiveByUserId(
+      new ObjectId(userId),
+    );
+
+    return sessions.map((session) => ({
+      id: session._id.toHexString(),
+      createdAt: session.createdAt,
+      expiresAt: session.expiresAt,
+      ipAddress: session.ipAddress,
+      userAgent: session.userAgent,
+    }));
+  }
+
+  public async logoutAll(userId: string): Promise<void> {
+    await this.revokeRefreshTokensByUserId(userId);
+  }
+
+  public async revokeSession(userId: string, sessionId: string): Promise<void> {
+    const result = await this.refreshTokenRepository.revokeByIdForUser({
+      id: this.toObjectId(sessionId, "Invalid session id"),
+      userId: new ObjectId(userId),
+    });
+
+    if (result.matchedCount === 0) {
+      throw new HttpError(404, "Session not found");
+    }
   }
 
   public async authenticateAccessToken(accessToken: string): Promise<AuthUser> {
@@ -202,7 +237,10 @@ export class AuthService {
     };
   }
 
-  private async issueTokenPair(user: PublicUser): Promise<AuthTokens> {
+  private async issueTokenPair(
+    user: PublicUser,
+    metadata: AuthSessionMetadata = {},
+  ): Promise<AuthTokens> {
     const userId = user._id.toHexString();
     const accessToken = this.signToken(
       {
@@ -227,13 +265,15 @@ export class AuthService {
       environment.JWT_REFRESH_EXPIRES_IN,
     );
 
-    await this.refreshTokens.insertOne({
+    await this.refreshTokenRepository.insert({
       userId: new ObjectId(userId),
       tokenHash: this.hashToken(refreshToken),
       expiresAt: new Date(
         Date.now() + this.parseDurationToMs(environment.JWT_REFRESH_EXPIRES_IN),
       ),
       createdAt: new Date(),
+      ipAddress: metadata.ipAddress,
+      userAgent: metadata.userAgent,
     });
 
     return {
@@ -278,51 +318,27 @@ export class AuthService {
       return false;
     }
 
-    try {
-      await this.bootstrapLocks.insertOne({
-        _id: FIRST_ADMIN_LOCK_ID,
-        createdAt: new Date(),
-      });
-      return true;
-    } catch (error) {
-      if (error instanceof MongoServerError && error.code === 11000) {
-        return false;
-      }
-
-      throw error;
-    }
+    return this.bootstrapLockRepository.claimFirstAdminLock();
   }
 
   private async revokeRefreshToken(tokenHash: string): Promise<void> {
-    await this.refreshTokens.updateOne(
-      {
-        tokenHash,
-        revokedAt: { $exists: false },
-      },
-      {
-        $set: {
-          revokedAt: new Date(),
-        },
-      },
-    );
+    await this.refreshTokenRepository.revokeByHash(tokenHash);
   }
 
   private async revokeRefreshTokensByUserId(userId: string): Promise<void> {
-    await this.refreshTokens.updateMany(
-      {
-        userId: new ObjectId(userId),
-        revokedAt: { $exists: false },
-      },
-      {
-        $set: {
-          revokedAt: new Date(),
-        },
-      },
-    );
+    await this.refreshTokenRepository.revokeByUserId(new ObjectId(userId));
   }
 
   private hashToken(token: string): string {
     return crypto.createHash("sha256").update(token).digest("hex");
+  }
+
+  private toObjectId(value: string, message: string): ObjectId {
+    if (!ObjectId.isValid(value)) {
+      throw new HttpError(400, message);
+    }
+
+    return new ObjectId(value);
   }
 
   private parseDurationToMs(duration: string): number {
